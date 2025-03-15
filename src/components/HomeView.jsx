@@ -84,7 +84,6 @@ export default function HomeView() {
 
   return (
     <>
-
       <div className="overflow-y-scroll pb-44">
       <video ref={videoRef} width="640" height="480" />
         {product.image_url === "" ? (
