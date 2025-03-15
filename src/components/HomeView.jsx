@@ -2,17 +2,29 @@ import { isSubscriber } from "@stevederico/skateboard-ui/Utilities";
 import React, { useEffect, useRef, useState } from "react";
 import Header from "@stevederico/skateboard-ui/Header";
 import { BrowserMultiFormatReader } from "@zxing/library";
+import badObj from "@root/ingredients.json"
 
 export default function HomeView() {
   const videoRef = useRef(null);
-  const [result, setResult] = useState("");
+  const [scan, setScan] = useState("");
+  const [product, setProduct] = useState("");
 
-  async function fetchProductInfo() {
+
+  async function fetchProductInfo(productID) {
     try {
       const response = await fetch(
-        `https://world.openfoodfacts.org/api/v3/product/${result}.json`
+        `https://world.openfoodfacts.org/api/v3/product/${productID}.json`
       );
       const data = await response.json();
+
+      const ingredientsString = data.product.ingredients
+.map(ingredient => ingredient.text)
+.join(', ');
+console.log(ingredientsString);
+
+      // let badArray = badObj.bad_ingredients
+      // console.log(badArray)
+      setProduct(ingredientsString)
       console.log(data);
     } catch (error) {
       console.error(error);
@@ -31,7 +43,11 @@ export default function HomeView() {
 
     const startScan = async () => {
       await reader.decodeFromVideoDevice(null, video, (res) => {
-        if (res) setResult(res.getText());
+        if (res){
+          let pid = res.getText()
+          setScan(pid);
+          fetchProductInfo(pid);
+        } 
       });
     };
 
@@ -44,13 +60,10 @@ export default function HomeView() {
       <Header buttonClass="" title="Home" />
       <div>
         <video ref={videoRef} width="640" height="480" />
-        <p>UPC: {result}</p>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          onClick={fetchProductInfo}
-        >
-          Fetch Product Info
-        </button>
+        <p>Scan a product to get started.</p>
+        <p>UPC: {scan}</p>
+        <p>Product: {product}</p>
+        
       </div>
     </>
   );
