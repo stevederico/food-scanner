@@ -92,11 +92,18 @@ export default function HomeView() {
           </>
         ) : (
         <>
-          <div className="mx-4 flex flex-col items-center">
-         
+          <div className="mx-4 flex flex-col items-center" >
             <div className="my-4 font-semibold text-xl">{product.product_name}</div>
             <div className="flex flex-wrap">{renderIngredients(ingredientsList)}</div>
-            <img className="mt-8" onClick={reset} src={product.image_url} alt="Product" />
+            <img className="mt-8"  src={product.image_url} alt="Product" />
+          </div>
+          <div className="flex justify-center mt-4">
+            <button
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              onClick={reset}
+            >
+              Scan Again
+            </button>
           </div>
         </>)}
 
