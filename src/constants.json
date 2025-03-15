@@ -2,7 +2,7 @@
     "appName": "Food Scan",
     "appIcon": "apple",
     "tagline": "Watch What You Eat",
-    "backendURL": "http://bob.bixbyapps.com:3000",
+    "backendURL": "https://bob.bixbyapps.com",
     "devBackendURL": "http://localhost:3000",
     "pages": [
         {
