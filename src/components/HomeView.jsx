@@ -6,9 +6,11 @@ import badArray from "@root/bad_ingredients.json"
 
 export default function HomeView() {
   const videoRef = useRef(null);
+  const readerRef = useRef(null);
   const [scan, setScan] = useState("");
-  const [product, setProduct] = useState("");
-
+  const [ingredientsList, setIngredientsList] = useState("");
+  const [message, setMessage] = useState("scan a barcode to get started");
+  const [product, setProduct] = useState({ product_name: "", image_url: "" });
 
   async function fetchProductInfo(productID) {
     try {
@@ -16,15 +18,14 @@ export default function HomeView() {
         `https://world.openfoodfacts.org/api/v3/product/${productID}.json`
       );
       const data = await response.json();
+      setProduct(data.product);
       console.log(data);
 
       const ingredientsString = data.product.ingredients
         .map(ingredient => ingredient.text)
         .join(', ');
       console.log(ingredientsString);
-      setProduct(ingredientsString)
-
-
+      setIngredientsList(ingredientsString);
     } catch (error) {
       console.error(error);
     }
@@ -43,43 +44,62 @@ export default function HomeView() {
     });
   }
 
-  useEffect(() => {
-    // Subscriber check
-    isSubscriber().then((s) => {
-      // Handle subscriber status if needed
-    });
-
-    // UPC Scanner
-    const reader = new BrowserMultiFormatReader();
+  const startScan = async () => {
     const video = videoRef.current;
-
-    const startScan = async () => {
-      await reader.decodeFromVideoDevice(null, video, (res) => {
+    if (readerRef.current && video) {
+      await readerRef.current.decodeFromVideoDevice(null, video, (res) => {
         if (res) {
-          let pid = res.getText()
+          let pid = res.getText();
           setScan(pid);
+          setMessage(`Product ID: ${pid}`);
           fetchProductInfo(pid);
         }
       });
-    };
+    }
+  };
 
+  function reset() {
+    setProduct({ product_name: "", image_url: "" });
+    setIngredientsList("");
+    setMessage("scan a barcode to get started");
+    setScan("");
+    if (readerRef.current) {
+      readerRef.current.reset();
+      startScan();
+    }
+  }
+
+  useEffect(() => {
+    isSubscriber().then((s) => {
+      // Handle subscriber status if needed
+    });
+    readerRef.current = new BrowserMultiFormatReader();
     startScan();
-    return () => reader.reset();
+    return () => {
+      if (readerRef.current) {
+        readerRef.current.reset();
+      }
+    };
   }, []);
 
   return (
     <>
-      <Header buttonClass="" title="Home" />
-      <div>
-        <video ref={videoRef} width="640" height="480" />
-        <p>Scan a product to get started.</p>
-        <p>UPC: {scan}</p>
-        <div>
-          <p>Product:</p>
-          <div className="flex flex-wrap">
-            {renderIngredients(product)}
+
+      <div className="overflow-y-scroll pb-44">
+      <video ref={videoRef} width="640" height="480" />
+        {product.image_url === "" ? (
+          <>
+            <div className="text-center m-3 font-semibold">{message}</div>
+          </>
+        ) : (
+        <>
+          <div className="mx-4 flex flex-col items-center">
+         
+            <div className="my-4 font-semibold text-xl">{product.product_name}</div>
+            <div className="flex flex-wrap">{renderIngredients(ingredientsList)}</div>
+            <img className="mt-8" onClick={reset} src={product.image_url} alt="Product" />
           </div>
-        </div>
+        </>)}
 
       </div>
     </>
