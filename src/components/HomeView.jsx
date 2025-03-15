@@ -2,7 +2,7 @@ import { isSubscriber } from "@stevederico/skateboard-ui/Utilities";
 import React, { useEffect, useRef, useState } from "react";
 import Header from "@stevederico/skateboard-ui/Header";
 import { BrowserMultiFormatReader } from "@zxing/library";
-import badObj from "@root/ingredients.json"
+import badArray from "@root/bad_ingredients.json"
 
 export default function HomeView() {
   const videoRef = useRef(null);
@@ -16,19 +16,31 @@ export default function HomeView() {
         `https://world.openfoodfacts.org/api/v3/product/${productID}.json`
       );
       const data = await response.json();
+      console.log(data);
 
       const ingredientsString = data.product.ingredients
-.map(ingredient => ingredient.text)
-.join(', ');
-console.log(ingredientsString);
-
-      // let badArray = badObj.bad_ingredients
-      // console.log(badArray)
+        .map(ingredient => ingredient.text)
+        .join(', ');
+      console.log(ingredientsString);
       setProduct(ingredientsString)
-      console.log(data);
+
+
     } catch (error) {
       console.error(error);
     }
+  }
+
+  function renderIngredients(ingredients) {
+    if (!ingredients) return null;
+    return ingredients.split(',').map((ing, index) => {
+      ing = ing.trim();
+      const isBad = badArray.some(bad => new RegExp(`^${bad.name}$`, "i").test(ing));
+      return (
+        <span key={index} className={`${isBad ? "text-red-500" : "text-gray-800"} mr-2`}>
+          {ing}
+        </span>
+      );
+    });
   }
 
   useEffect(() => {
@@ -43,11 +55,11 @@ console.log(ingredientsString);
 
     const startScan = async () => {
       await reader.decodeFromVideoDevice(null, video, (res) => {
-        if (res){
+        if (res) {
           let pid = res.getText()
           setScan(pid);
           fetchProductInfo(pid);
-        } 
+        }
       });
     };
 
@@ -62,8 +74,13 @@ console.log(ingredientsString);
         <video ref={videoRef} width="640" height="480" />
         <p>Scan a product to get started.</p>
         <p>UPC: {scan}</p>
-        <p>Product: {product}</p>
-        
+        <div>
+          <p>Product:</p>
+          <div className="flex flex-wrap">
+            {renderIngredients(product)}
+          </div>
+        </div>
+
       </div>
     </>
   );
