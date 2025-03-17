@@ -47,7 +47,14 @@ export default function HomeView() {
   const startScan = async () => {
     const video = videoRef.current;
     if (readerRef.current && video) {
-      await readerRef.current.decodeFromVideoDevice(null, video, (res) => {
+      const constraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      };
+      await readerRef.current.decodeFromConstraints(constraints, video, (res) => {
         if (res) {
           let pid = res.getText();
           setScan(pid);

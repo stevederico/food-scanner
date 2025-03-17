@@ -3,7 +3,7 @@
     "appIcon": "apple",
     "tagline": "Watch What You Eat",
     "backendURL": "https://bob.bixbyapps.com",
-    "devBackendURL": "http://localhost:8000",
+    "devBackendURL": "http://localhost:3000",
     "pages": [
         {
             "title": "Home",
