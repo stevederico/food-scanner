@@ -5,6 +5,15 @@
 - shopping lists
 - browse by aisle
 - show product possible on search?
+- stores on home page
+
+- weird water 
+0.5.0
+* handle for ingredeints missing
+* 50 recent scans
+* US only on homeView
+* fixed off by one on recent scans
+* header
 0.4.0
 * added scan history to homeView
 * added search by name to HomeView
@@ -29,3 +38,4 @@
 
 
 update bg-background and text-foreground insteadl
+Feel free to make components to reduce duplicated code

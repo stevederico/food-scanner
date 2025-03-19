@@ -3,7 +3,8 @@ import { ShoppingBag, Scan, Search, Clock, Store, Info, ArrowRight } from 'lucid
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import ProductDialog from './ProductDialog';
-import badArray from "@root/bad_ingredients.json"
+import { fetchProduct, addToRecentScans } from '../services/ProductService';
+import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
 
 export default function HomeView() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,113 +22,44 @@ export default function HomeView() {
     }
   }, []);
 
-  const addToRecentScans = (product) => {
-    if (!product?.code) return;
-    
-    const newScans = [
-      { 
-        id: product.code,
-        name: product.product_name || 'Unknown Product', 
-        image: product.image_url || null,
-        timestamp: Date.now()
-      },
-      ...recentScans.filter(scan => scan.id !== product.code)
-    ].slice(0, 10);
-    
-    setRecentScans(newScans);
-    localStorage.setItem('recentScans', JSON.stringify(newScans));
-  };
-
   async function handleSearch(e) {
     e.preventDefault();
     try {
-      let data;
+      let product;
       if (searchQuery.match(/^[0-9]+$/)) {
-        // If query is numeric, search by barcode
-        const response = await fetch(
-          `https://world.openfoodfacts.org/api/v3/product/${searchQuery}.json`
-        );
-        data = await response.json();
+        product = await fetchProduct(searchQuery);
       } else {
-        // Search by name
         const response = await fetch(
           `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&json=true&page_size=1`
         );
-        data = await response.json();
+        const data = await response.json();
         if (data.products?.length > 0) {
-          data = { status: "success", product: data.products[0] };
+          product = await fetchProduct(data.products[0].code);
         } else {
-          data = { status: "failure" };
+          throw new Error("Product not found");
         }
       }
 
-      if (data.status === "failure") {
-        setErrorMessage("Product not found. Try a different search.");
-        setIsOpen(true);
-        return;
-      }
-
-      setProduct(data.product);
-      const ingredientsString = data.product.ingredients
+      setProduct(product);
+      const ingredientsString = product.ingredients
         ?.map(ingredient => ingredient.text)
         .join(', ') || '';
       setIngredientsList(ingredientsString);
       setIsApproved(checkIsApproved(ingredientsString));
       setErrorMessage('');
       setIsOpen(true);
-      addToRecentScans(data.product);
+      const newScans = addToRecentScans(product);
+      setRecentScans(newScans);
     } catch (error) {
       console.error(error);
-      setErrorMessage("Error searching for product. Please try again.");
+      setErrorMessage(error.message || "Error searching for product. Please try again.");
       setIsOpen(true);
     }
   }
 
-  function checkIsApproved(ingredients) {
-    if (!ingredients) return true;
-    const ingredientsArray = ingredients.split(',');
-    return !ingredientsArray.some(ing => {
-      const cleanIngredient = ing.trim().toLowerCase();
-      const match = badArray.find(bad => {
-        if (!bad) return false;
-        const propertyToUse = bad.name || bad.title;
-        if (!propertyToUse) return false;
-        const cleanBadName = propertyToUse.toLowerCase().replace(/\([^)]*\)/g, '').trim();
-        return cleanIngredient === cleanBadName;
-      });
-      return match?.color === 'red' || (match?.baddness_score || 0) > 5;
-    });
-  }
-
-  function renderIngredients(ingredients) {
-    if (!ingredients) return null;
-    return ingredients.split(',').map((ing, index) => {
-      ing = ing.trim();
-      const cleanIngredient = ing.toLowerCase().replace(/\([^)]*\)/g, '').trim();
-      const ingredient = badArray.find(bad => {
-        if (!bad) return false;
-        const propertyToUse = bad.name || bad.title;
-        if (!propertyToUse) return false;
-        const cleanBadName = propertyToUse.toLowerCase().replace(/\([^)]*\)/g, '').trim();
-        return cleanIngredient === cleanBadName;
-      });
-      const colorClasses = {
-        red: "text-red-500",
-        yellow: "text-yellow-500",
-        green: "text-green-500"
-      };
-      const formattedIngredient = ing.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-      return (
-        <span key={index} className={`${ingredient ? colorClasses[ingredient.color] : ""} mr-1`}>
-          {formattedIngredient},
-        </span>
-      );
-    });
-  }
-
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <Header buttonClass="" title="BXFood" />
+      <Header buttonClass="" title="Welcome" />
       
       <main className="flex-1 px-4 pb-20">
         {/* Search Bar */}
@@ -167,9 +99,21 @@ export default function HomeView() {
               <button 
                 key={scan.id} 
                 className="flex-shrink-0 w-32 bg-accent rounded-lg p-3"
-                onClick={() => {
-                  setSearchQuery(scan.id);
-                  handleSearch(new Event('submit'));
+                onClick={async () => {
+                  try {
+                    const product = await fetchProduct(scan.id);
+                    setProduct(product);
+                    const ingredientsString = product.ingredients
+                      ?.map(ingredient => ingredient.text)
+                      .join(', ') || '';
+                    setIngredientsList(ingredientsString);
+                    setIsApproved(checkIsApproved(ingredientsString));
+                    setErrorMessage('');
+                    setIsOpen(true);
+                  } catch (error) {
+                    setErrorMessage(error.message);
+                    setIsOpen(true);
+                  }
                 }}
               >
                 <div className="w-full h-24 bg-background rounded-md mb-2 overflow-hidden">
@@ -192,7 +136,7 @@ export default function HomeView() {
         </div>
 
         {/* Healthy Stores */}
-        <div className="mt-8">
+        {/* <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Store className="w-5 h-5" />
@@ -201,22 +145,22 @@ export default function HomeView() {
             <ArrowRight className="w-5 h-5 text-gray-400" />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            {['Whole Foods', 'Trader Joe\'s'].map(store => (
-              <div key={store} className="bg-background p-4 rounded-lg shadow-sm">
-                <div className="flex items-center gap-3">
+            {['Costco', 'Trader Joe\'s', 'Whole Foods'].map(store => (
+              <div key={store} className="bg-accent p-4 rounded-lg shadow-sm">
+                <div className="flex items-center gap-1">
                   <ShoppingBag className="w-6 h-6 text-green-500" />
                   <span className="font-medium">{store}</span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Quick Tips */}
         <div className="mt-8 bg-accent rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Info className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">Quick Tips</h2>
+            <h2 className="text-lg font-semibold">Ingredients Guide</h2>
           </div>
           <ul className="space-y-2">
             <li className="flex items-center gap-2">
@@ -239,7 +183,7 @@ export default function HomeView() {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         product={product}
-        ingredientsList={renderIngredients(ingredientsList)}
+        ingredientsList={<IngredientRenderer ingredients={ingredientsList} />}
         isApproved={isApproved}
         errorMessage={errorMessage}
       />

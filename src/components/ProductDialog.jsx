@@ -24,17 +24,19 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
                 <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt="Product" />
                 <div className="absolute inset-0 bg-white/25" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {isApproved ? (
-                    <div className="flex flex-col items-center">
-                      <ThumbsUp className="size-24 text-green-500" />
-                      <div className="bg-green-500 px-3 py-2 text-white rounded-full my-4">Approved</div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <ThumbsDown className="size-24 text-red-500" />
-                      <div className="bg-red-500 px-3 py-2 text-white rounded-full my-4">Not Approved</div>
-                    </div>
-                  )}
+                  {ingredientsList ? (
+                    isApproved ? (
+                      <div className="flex flex-col items-center">
+                        <ThumbsUp className="size-24 text-green-500" />
+                        <div className="bg-green-500 px-3 py-2 text-white rounded-full my-4">Approved</div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <ThumbsDown className="size-24 text-red-500" />
+                        <div className="bg-red-500 px-3 py-2 text-white rounded-full my-4">Not Approved</div>
+                      </div>
+                    )
+                  ) : null}
                 </div>
               </div>
               <div className="flex justify-between items-center mb-4">
