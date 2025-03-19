@@ -1,3 +1,5 @@
+
+* improved ingredient detection and dialog
 0.2.0
 * tabbar with action button to scan
 * full screen the scanning
