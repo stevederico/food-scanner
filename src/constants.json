@@ -22,6 +22,7 @@
         "interval": "monthly",
         "lookup_key": "my_lookup_key"
     }],
+    "noLogin": true,
     "companyName": "Company Inc",
     "companyWebsite": "www.company.com",
     "companyEmail": "support@company.com",

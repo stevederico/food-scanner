@@ -26,6 +26,11 @@ import HomeView from './components/HomeView.jsx'
 import ScanView from './components/ScanView.jsx'
 
 const ProtectedRoute = () => {
+
+  if (typeof constants.noLogin !== 'undefined' && constants.noLogin === true) {
+    return <Outlet />;
+  }
+
   if (!isAuthenticated()) {
     return <Navigate to="/signin" replace />;
   }
@@ -69,6 +74,9 @@ const App = () => {
             console.error('Failed to fetch user:', error);
           }
         } else {
+          if (typeof constants.noLogin !== 'undefined' && constants.noLogin === true) {
+            return 
+          }
           navigate('/signin');
         }
       }

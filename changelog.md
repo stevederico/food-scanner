@@ -1,13 +1,16 @@
 - coupons
-- my allgerens
-- favorites
-- ingredients list
+- add my allgerens to bad ingredients list
+- favorites list
+- bad ingredients list
 - shopping lists
 - browse by aisle
 - show product possible on search?
 - stores on home page
-
 - weird water 
+- move api requests to backend, move bad_ingredeints to backend too?
+
+
+* removed login
 0.5.0
 * handle for ingredeints missing
 * 50 recent scans
@@ -36,6 +39,6 @@
 
 
 
-
+switch for no login
 update bg-background and text-foreground insteadl
 Feel free to make components to reduce duplicated code
