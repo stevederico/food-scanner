@@ -8,7 +8,7 @@ import {
   useNavigate,
   useLocation,
 } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import './assets/styles.css';
 import Layout from '@stevederico/skateboard-ui/Layout';
 import LandingView from '@stevederico/skateboard-ui/LandingView';
@@ -25,19 +25,12 @@ import constants from './constants.json';
 import HomeView from './components/HomeView.jsx'
 import ScanView from './components/ScanView.jsx'
 
-const ProtectedRoute = () => {
-
-  if (typeof constants.noLogin !== 'undefined' && constants.noLogin === true) {
-    return <Outlet />;
-  }
-
-  if (!isAuthenticated()) {
-    return <Navigate to="/signin" replace />;
-  }
-  return <Outlet />;
-};
-
 function isAuthenticated() {
+  // Check client-side noLogin flag first
+  if (constants.noLogin === true) {
+    return true;
+  }
+  // Otherwise check for valid auth token
   try {
     const token = document.cookie
       .split('; ')
@@ -49,6 +42,11 @@ function isAuthenticated() {
   }
 }
 
+const ProtectedRoute = () => {
+  const auth = isAuthenticated();
+  return auth ? <Outlet /> : <Navigate to="/signin" replace />;
+};
+
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -56,27 +54,21 @@ const App = () => {
 
   useEffect(() => {
     document.title = constants.appName;
-
     const appStart = async () => {
-      if (location.pathname.toLowerCase().includes('app')) {
-        console.log('App Start in /app');
-        const localUser = localStorage.getItem('user');
-        if (localUser) {
-          try {
-            console.log('APP START - Fetching user');
-            const data = await getCurrentUser();
-            if (data) {
-              dispatch({ type: 'SET_USER', payload: data });
-            } else {
-              navigate('/signin');
-            }
-          } catch (error) {
-            console.error('Failed to fetch user:', error);
-          }
-        } else {
-          if (typeof constants.noLogin !== 'undefined' && constants.noLogin === true) {
-            return 
-          }
+      if (!location.pathname.toLowerCase().includes('app')) {
+        return;
+      }
+
+      // Always try to fetch user data regardless of noLogin
+      // The server will allow the request through if noLogin is enabled on its side
+      try {
+        const data = await getCurrentUser();
+        if (data) {
+          dispatch({ type: 'SET_USER', payload: data });
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error);
+        if (!constants.noLogin) {
           navigate('/signin');
         }
       }
