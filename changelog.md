@@ -1,14 +1,17 @@
-
-- search - 
 - coupons
 - my allgerens
 - favorites
-- scan history
 - ingredients list
-- store search
 - shopping lists
 - browse by aisle
-- recently scanned items
+- show product possible on search?
+0.4.0
+* added scan history to homeView
+* added search by name to HomeView
+* added HomeView
+* created ProductDialog
+* added placeholder to image on ProductDialoag
+
 0.3.0
 * handle errors and blank response
 * thumbs score on scan
@@ -23,4 +26,6 @@
 * added scanning 
 
 
-<ThumbsUp />
+
+
+update bg-background and text-foreground insteadl

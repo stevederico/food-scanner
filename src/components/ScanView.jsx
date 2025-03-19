@@ -43,6 +43,7 @@ export default function ScanView() {
         return;
       }
       setProduct(data.product);
+      addToRecentScans(data.product);
       const ingredientsString = data.product.ingredients
         .map(ingredient => ingredient.text)
         .join(', ');
@@ -101,6 +102,23 @@ export default function ScanView() {
     }
   };
 
+  const addToRecentScans = (product) => {
+    if (!product?.code) return;
+    
+    const currentScans = JSON.parse(localStorage.getItem('recentScans') || '[]');
+    const newScans = [
+      { 
+        id: product.code,
+        name: product.product_name || 'Unknown Product', 
+        image: product.image_url || null,
+        timestamp: Date.now()
+      },
+      ...currentScans.filter(scan => scan.id !== product.code)
+    ].slice(0, 10);
+    
+    localStorage.setItem('recentScans', JSON.stringify(newScans));
+  };
+
   function reset() {
     setProduct({ product_name: "", image_url: "" });
     setIngredientsList("");
@@ -155,7 +173,8 @@ export default function ScanView() {
               <>
 
                 <div className="relative w-full flex justify-center mb-4">
-                  <img className="w-full object-contain max-h-64" src={product.image_url} alt="Product" />
+                  <div className="h-64 w-full bg-background" /> {/* Placeholder */}
+                  <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt="Product" />
                   <div className="absolute inset-0 bg-white/25" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     {isApproved ?
