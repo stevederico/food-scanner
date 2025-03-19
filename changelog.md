@@ -1,4 +1,15 @@
 
+- search - 
+- coupons
+- my allgerens
+- favorites
+- scan history
+- ingredients list
+- store search
+- shopping lists
+- browse by aisle
+- recently scanned items
+* thumbs score on scan
 * improved ingredient detection and dialog
 0.2.0
 * tabbar with action button to scan
@@ -7,4 +18,7 @@
 * highlight bad ingredients in red ( check ingredients.json)
 * show ingredients on screen when received from api, product.ingredients
 * added food api
-* added scanning
+* added scanning 
+
+
+<ThumbsUp />

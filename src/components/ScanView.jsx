@@ -3,14 +3,32 @@ import React, { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
 import badArray from "@root/bad_ingredients.json"
 import * as Dialog from '@radix-ui/react-dialog';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
+
 
 export default function ScanView() {
   const videoRef = useRef(null);
   const readerRef = useRef(null);
   const [ingredientsList, setIngredientsList] = useState("");
-  const [message, setMessage] = useState("scan a barcode to get started");
   const [product, setProduct] = useState({ product_name: "", image_url: "" });
   const [open, setOpen] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+
+  function checkIsApproved(ingredients) {
+    if (!ingredients) return true;
+    const ingredientsArray = ingredients.split(',');
+    return !ingredientsArray.some(ing => {
+      const cleanIngredient = ing.trim().toLowerCase();
+      const match = badArray.find(bad => {
+        if (!bad) return false;
+        const propertyToUse = bad.name || bad.title;
+        if (!propertyToUse) return false;
+        const cleanBadName = propertyToUse.toLowerCase().replace(/\([^)]*\)/g, '').trim();
+        return cleanIngredient === cleanBadName;
+      });
+      return match?.color === 'red' || (match?.baddness_score || 0) > 5;
+    });
+  }
 
   async function fetchProductInfo(productID) {
     try {
@@ -19,13 +37,11 @@ export default function ScanView() {
       );
       const data = await response.json();
       setProduct(data.product);
-      console.log(data);
-
       const ingredientsString = data.product.ingredients
         .map(ingredient => ingredient.text)
         .join(', ');
-      console.log(ingredientsString);
       setIngredientsList(ingredientsString);
+      setIsApproved(checkIsApproved(ingredientsString));
     } catch (error) {
       console.error(error);
     }
@@ -51,7 +67,7 @@ export default function ScanView() {
       // Capitalize first letter of each word
       const formattedIngredient = ing.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
       return (
-        <span key={index} className={`${ingredient ? colorClasses[ingredient.color] : "text-gray-800"} mr-1`}>
+        <span key={index} className={`${ingredient ? colorClasses[ingredient.color] : ""} mr-1`}>
           {formattedIngredient},
         </span>
       );
@@ -79,7 +95,6 @@ export default function ScanView() {
   function reset() {
     setProduct({ product_name: "", image_url: "" });
     setIngredientsList("");
-    setMessage("scan a barcode to get started");
     if (readerRef.current) {
       readerRef.current.reset();
       startScan();
@@ -108,18 +123,33 @@ export default function ScanView() {
   return (
     <div className="relative h-screen w-screen overflow-hidden">
       <video ref={videoRef} className="w-full h-full object-cover absolute inset-0" />
-      
+
       <Dialog.Root open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen);
         if (!isOpen) reset();
       }}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto">
-            <Dialog.Title className="text-xl font-semibold mb-4 text-black">{product.product_name}</Dialog.Title>
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg p-6 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto">
+            {/* IMAGE */}
+            <div className="relative w-full flex justify-center mb-6">
+              <img className="w-full object-contain max-h-64" src={product.image_url} alt="Product" />
+              <div className="absolute inset-0 bg-white/25" /> {/* Semi-transparent overlay */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                {isApproved ? 
+                  <ThumbsUp className="size-24 text-green-500" /> : 
+                  <div className="flex flex-col items-center">
+                    <ThumbsDown className="size-24 text-red-500" />
+                    <div className="bg-red-500 px-3 py-2 text-white rounded-full my-4">Not Approved</div>
+                  </div>
+                }
+              </div>
+            </div>
+            <div className="flex justify-between items-center mb-4">
+              <Dialog.Title className="text-xl font-semibold">{product.product_name}</Dialog.Title>
+            </div>
             <div className="flex flex-wrap mb-4 capitalize">{renderIngredients(ingredientsList)}</div>
-            <img className="w-full object-contain max-h-64" src={product.image_url} alt="Product" />
-            <div className="mt-6 flex ">
+            <div className="mt-6 flex">
               <button
                 className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                 onClick={() =>{ setOpen(false); reset();}}
