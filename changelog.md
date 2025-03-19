@@ -9,6 +9,8 @@
 - shopping lists
 - browse by aisle
 - recently scanned items
+0.3.0
+* handle errors and blank response
 * thumbs score on scan
 * improved ingredient detection and dialog
 0.2.0
