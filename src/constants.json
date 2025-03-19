@@ -11,9 +11,9 @@
             "icon": "house"
         },
         {
-            "title": "Other",
-            "url": "other",
-            "icon": "inbox"
+            "title": "Scan",
+            "url": "scan",
+            "icon": "camera"
         }
     ],
     "stripeProducts": [{
