@@ -5,8 +5,8 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background rounded-lg p-6 w-[90vw] max-w-md max-h-[85vh] overflow-y-auto">
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Content onOpenAutoFocus={(event) => event.preventDefault()} className="fixed bottom-0 left-0 right-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 data-[state=closed]:animate-out data-[state=open]:animate-in">
           {errorMessage ? (
             <>
               <Dialog.Title className="text-xl font-semibold text-center mb-4">{errorMessage}</Dialog.Title>
