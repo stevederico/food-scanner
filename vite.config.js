@@ -22,6 +22,14 @@ export default defineConfig({
       '@root': path.resolve(__dirname),
     }
   },
+    server: {
+    fs: {
+      strict: false
+    }
+  },
+  build: {
+    sourcemap: false
+  },
   optimizeDeps: {
     include: ['react-dom'],
 },
