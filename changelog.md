@@ -10,7 +10,8 @@
 - move api requests to backend, move bad_ingredeints to backend too?
 
 
-* removed login
+0.6.0
+* added login back
 0.5.0
 * handle for ingredeints missing
 * 50 recent scans
