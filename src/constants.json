@@ -22,7 +22,6 @@
         "interval": "monthly",
         "lookup_key": "food_monthly"
     }],
-    "noLogin": true,
     "companyName": "Bixby Apps, LLC",
     "companyWebsite": "www.bixbyapps.com",
     "companyEmail": "support@company.com",
