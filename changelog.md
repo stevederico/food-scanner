@@ -9,6 +9,11 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.7.2
+
+  Fix vertical scrolling
+  Remove overflow hidden
+
 0.7.1
 
   Add features object
