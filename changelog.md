@@ -9,6 +9,12 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.7.1
+
+  Add features object
+  Add cta field
+  Fix LandingView error
+
 0.7.0
 
   Update skateboard-ui 0.9.6
