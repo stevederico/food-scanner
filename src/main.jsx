@@ -8,14 +8,15 @@ import {
   useNavigate,
   useLocation,
 } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import './assets/styles.css';
 import Layout from '@stevederico/skateboard-ui/Layout';
 import LandingView from '@stevederico/skateboard-ui/LandingView';
 import TextView from '@stevederico/skateboard-ui/TextView';
 import SignUpView from '@stevederico/skateboard-ui/SignUpView';
 import SignInView from '@stevederico/skateboard-ui/SignInView';
-import StripeView from '@stevederico/skateboard-ui/StripeView';
+import SignOutView from '@stevederico/skateboard-ui/SignOutView';
+import PaymentView from '@stevederico/skateboard-ui/PaymentView';
 import SettingsView from '@stevederico/skateboard-ui/SettingsView';
 import NotFound from '@stevederico/skateboard-ui/NotFound';
 import { getCurrentUser } from '@stevederico/skateboard-ui/Utilities';
@@ -25,78 +26,79 @@ import constants from './constants.json';
 import HomeView from './components/HomeView.jsx'
 import ScanView from './components/ScanView.jsx'
 
+// Check if user is authenticated via CSRF token
 function isAuthenticated() {
-  // Check client-side noLogin flag first
   if (constants.noLogin === true) {
     return true;
   }
-  // Otherwise check for valid auth token
-  try {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('token='))
-      ?.split('=')[1];
-    return Boolean(token);
-  } catch (e) {
-    return false;
-  }
+  const appName = constants.appName || 'food-scan';
+  const csrfKey = `${appName.toLowerCase().replace(/\s+/g, '-')}_csrf`;
+  return Boolean(localStorage.getItem(csrfKey));
 }
 
+// Protected route wrapper
 const ProtectedRoute = () => {
-  const auth = isAuthenticated();
-  return auth ? <Outlet /> : <Navigate to="/signin" replace />;
+  return isAuthenticated() ? <Outlet /> : <Navigate to="/signin" replace />;
 };
 
 const App = () => {
-const location = useLocation();
+  const location = useLocation();
   const navigate = useNavigate();
   const { state, dispatch } = getState();
+  const fetchingRef = useRef(false);
 
+  // Set page title and reset dark mode on non-app pages
   useEffect(() => {
-    const html = document.documentElement;
-    if (!location.pathname.toLowerCase().includes('app')) {
-      document.body.classList.remove('dark');
-      html.classList.remove('dark');
-    }
     document.title = constants.appName;
-    const appStart = async () => {
-      if (!location.pathname.toLowerCase().includes('app')) {
-        return;
-      }
+    if (!location.pathname.toLowerCase().includes('app')) {
+      document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
+    }
+  }, [location.pathname]);
 
-      // Always try to fetch user data regardless of noLogin
-      // The server will allow the request through if noLogin is enabled on its side
+  // Fetch user data when entering app routes
+  useEffect(() => {
+    const isAppRoute = location.pathname.toLowerCase().includes('app');
+    if (!isAppRoute || state.user || fetchingRef.current) return;
+
+    const fetchUser = async () => {
+      fetchingRef.current = true;
       try {
         const data = await getCurrentUser();
         if (data) {
           dispatch({ type: 'SET_USER', payload: data });
+        } else if (!constants.noLogin) {
+          navigate('/signin');
         }
       } catch (error) {
         console.error('Failed to fetch user:', error);
         if (!constants.noLogin) {
           navigate('/signin');
         }
+      } finally {
+        fetchingRef.current = false;
       }
     };
 
-    appStart();
-  }, [location.pathname, navigate, dispatch]);
+    fetchUser();
+  }, [location.pathname, state.user, dispatch, navigate]);
 
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/console" element={<Navigate to="/app" replace />} />
         <Route path="/app" element={<ProtectedRoute />}>
-              <Route index element={<Navigate to="home" replace />} />
-              <Route path="home" element={<HomeView />} />
-              <Route path="scan" element={<ScanView />} />
-              <Route path="settings" element={<SettingsView />} />
-              <Route path="stripe" element={<StripeView />} />
+          <Route index element={<Navigate to="home" replace />} />
+          <Route path="home" element={<HomeView />} />
+          <Route path="scan" element={<ScanView />} />
+          <Route path="settings" element={<SettingsView />} />
+          <Route path="stripe" element={<PaymentView />} />
         </Route>
       </Route>
       <Route path="/" element={<LandingView />} />
       <Route path="/signin" element={<SignInView />} />
       <Route path="/signup" element={<SignUpView />} />
+      <Route path="/signout" element={<SignOutView />} />
       <Route
         path="/terms"
         element={<TextView details={constants.termsOfService} />}

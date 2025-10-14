@@ -6,9 +6,16 @@
 - browse by aisle
 - show product possible on search?
 - stores on home page
-- weird water 
+- weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.7.0
+
+  Update skateboard-ui 0.9.6
+  Add httpOnly cookies
+  Add CSRF protection
+  Simplify context.jsx
+  Add SignOutView route
 
 0.6.0
 * added login back
