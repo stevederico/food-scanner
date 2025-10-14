@@ -9,6 +9,11 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.7.3
+
+  Fix background color mismatch
+  Change to pure white background
+
 0.7.2
 
   Fix vertical scrolling
