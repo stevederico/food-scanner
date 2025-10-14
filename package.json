@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
-    "@stevederico/skateboard-ui": "0.9.6",
+    "@stevederico/skateboard-ui": "0.9.8",
     "@zxing/library": "^0.21.3",
     "lucide-react": "^0.509.0",
     "react": "^19.1.0",
