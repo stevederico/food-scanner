@@ -4,11 +4,10 @@ import {
   Routes,
   Route,
   Navigate,
-  Outlet,
   useNavigate,
   useLocation,
 } from 'react-router-dom';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import './assets/styles.css';
 import Layout from '@stevederico/skateboard-ui/Layout';
 import LandingView from '@stevederico/skateboard-ui/LandingView';
@@ -19,69 +18,24 @@ import SignOutView from '@stevederico/skateboard-ui/SignOutView';
 import PaymentView from '@stevederico/skateboard-ui/PaymentView';
 import SettingsView from '@stevederico/skateboard-ui/SettingsView';
 import NotFound from '@stevederico/skateboard-ui/NotFound';
-import { getCurrentUser } from '@stevederico/skateboard-ui/Utilities';
+import ProtectedRoute from '@stevederico/skateboard-ui/ProtectedRoute';
+import { useAppSetup, isAuthenticated, getCSRFToken, getAppKey } from '@stevederico/skateboard-ui/Utilities';
 import { ContextProvider, getState } from './context.jsx';
 import constants from './constants.json';
 
 import HomeView from './components/HomeView.jsx'
 import ScanView from './components/ScanView.jsx'
 
-// Check if user is authenticated via CSRF token
-function isAuthenticated() {
-  if (constants.noLogin === true) {
-    return true;
-  }
-  const appName = constants.appName || 'food-scan';
-  const csrfKey = `${appName.toLowerCase().replace(/\s+/g, '-')}_csrf`;
-  return Boolean(localStorage.getItem(csrfKey));
-}
-
-// Protected route wrapper
-const ProtectedRoute = () => {
-  return isAuthenticated() ? <Outlet /> : <Navigate to="/signin" replace />;
-};
-
 const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { state, dispatch } = getState();
-  const fetchingRef = useRef(false);
+  const { dispatch } = getState();
 
-  // Set page title and reset dark mode on non-app pages
   useEffect(() => {
     document.title = constants.appName;
-    if (!location.pathname.toLowerCase().includes('app')) {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.remove('dark');
-    }
-  }, [location.pathname]);
+  }, []);
 
-  // Fetch user data when entering app routes
-  useEffect(() => {
-    const isAppRoute = location.pathname.toLowerCase().includes('app');
-    if (!isAppRoute || state.user || fetchingRef.current) return;
-
-    const fetchUser = async () => {
-      fetchingRef.current = true;
-      try {
-        const data = await getCurrentUser();
-        if (data) {
-          dispatch({ type: 'SET_USER', payload: data });
-        } else if (!constants.noLogin) {
-          navigate('/signin');
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
-        if (!constants.noLogin) {
-          navigate('/signin');
-        }
-      } finally {
-        fetchingRef.current = false;
-      }
-    };
-
-    fetchUser();
-  }, [location.pathname, state.user, dispatch, navigate]);
+  useAppSetup(location, navigate, dispatch);
 
   return (
     <Routes>
