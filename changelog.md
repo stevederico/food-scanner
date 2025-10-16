@@ -9,6 +9,11 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.7.5
+
+  Update dependencies
+  Add noLogin configuration flag
+
 0.7.4
 
   Add tailwindcss-animate plugin
