@@ -9,6 +9,12 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.8.0
+
+  Update dependencies
+  Remove context.jsx
+  Update vite configuration
+
 0.7.5
 
   Update dependencies
