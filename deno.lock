@@ -2,7 +2,7 @@
   "version": "5",
   "specifiers": {
     "npm:@radix-ui/react-dialog@^1.1.6": "1.1.15_react@19.2.0_react-dom@19.2.0__react@19.2.0",
-    "npm:@stevederico/skateboard-ui@^1.0.4": "1.0.4_react@19.2.0_react-dom@19.2.0__react@19.2.0_react-router-dom@7.9.4__react@19.2.0__react-dom@19.2.0___react@19.2.0_tailwindcss@4.1.14",
+    "npm:@stevederico/skateboard-ui@1.0.9": "1.0.9_react@19.2.0_react-dom@19.2.0__react@19.2.0_react-router-dom@7.9.4__react@19.2.0__react-dom@19.2.0___react@19.2.0_tailwindcss@4.1.14",
     "npm:@tailwindcss/vite@^4.1.14": "4.1.14_vite@7.1.10__picomatch@4.0.3",
     "npm:@vitejs/plugin-react-swc@^4.1.0": "4.1.0_vite@7.1.10__picomatch@4.0.3",
     "npm:@zxing/library@~0.21.3": "0.21.3",
@@ -16,8 +16,8 @@
     "npm:vite@^7.1.10": "7.1.10_picomatch@4.0.3"
   },
   "npm": {
-    "@babel/runtime@7.28.3": {
-      "integrity": "sha512-9uIQ10o0WGdpP6GDhXcdOJPJuDgFtIDtN/9+ArJQ2NAfAmiuhTQdzkaTGR33v43GYS2UrSA0eX2pPPHoFVvpxA=="
+    "@babel/runtime@7.28.4": {
+      "integrity": "sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ=="
     },
     "@date-fns/tz@1.4.1": {
       "integrity": "sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA=="
@@ -942,8 +942,8 @@
       "os": ["win32"],
       "cpu": ["x64"]
     },
-    "@stevederico/skateboard-ui@1.0.4_react@19.2.0_react-dom@19.2.0__react@19.2.0_react-router-dom@7.9.4__react@19.2.0__react-dom@19.2.0___react@19.2.0_tailwindcss@4.1.14": {
-      "integrity": "sha512-uSqujf68cLWkr0gyI41uxemH6j3gc3l1jRTkWidJaaAGb9DpaRR43bO5EIYMXjmdqAR+aOlK/Thq8b/k4dQlJw==",
+    "@stevederico/skateboard-ui@1.0.9_react@19.2.0_react-dom@19.2.0__react@19.2.0_react-router-dom@7.9.4__react@19.2.0__react-dom@19.2.0___react@19.2.0_tailwindcss@4.1.14": {
+      "integrity": "sha512-kofCiBTB/RbB4dTJ6kN7vHISuPu9ZvEOGRxEMt6p11OTxKyyMmq8PCRT2OpPK+otdXXcE59yLzdnFXiICmCdpg==",
       "dependencies": [
         "@radix-ui/react-accordion",
         "@radix-ui/react-alert-dialog",
@@ -1401,8 +1401,8 @@
     "eventemitter3@4.0.7": {
       "integrity": "sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw=="
     },
-    "fast-equals@5.2.2": {
-      "integrity": "sha512-V7/RktU11J3I36Nwq2JnZEM7tNm17eBJz+u25qdxBZeCKiX6BkVSZQjwWIr+IobgnZy+ag73tTZgZi7tr0LrBw=="
+    "fast-equals@5.3.2": {
+      "integrity": "sha512-6rxyATwPCkaFIL3JLqw8qXqMpIZ942pTX/tbQFkRsDGblS8tNGtlUauA/+mt6RUfqn/4MoEr+WDkYoIQbibWuQ=="
     },
     "fdir@6.5.0_picomatch@4.0.3": {
       "integrity": "sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==",
@@ -1850,7 +1850,7 @@
     "packageJson": {
       "dependencies": [
         "npm:@radix-ui/react-dialog@^1.1.6",
-        "npm:@stevederico/skateboard-ui@^1.0.4",
+        "npm:@stevederico/skateboard-ui@1.0.9",
         "npm:@tailwindcss/vite@^4.1.14",
         "npm:@vitejs/plugin-react-swc@^4.1.0",
         "npm:@zxing/library@~0.21.3",
