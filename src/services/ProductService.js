@@ -1,6 +1,6 @@
 const fetchProduct = async (productID) => {
   const response = await fetch(
-    `https://world.openfoodfacts.org/api/v3/product/${productID}.json?fields=code,product_name,image_url,ingredients`
+    `https://us.openfoodfacts.org/api/v3/product/${productID}.json?fields=code,product_name,image_url,ingredients`
   );
   const data = await response.json();
   

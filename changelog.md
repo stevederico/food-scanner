@@ -1,3 +1,4 @@
+
 - coupons
 - add my allgerens to bad ingredients list
 - favorites list
@@ -8,6 +9,10 @@
 - stores on home page
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
+
+0.8.1
+
+FIXED: Search on Home now uses us.openfoodfacts.org, ProductDialog has scrolling
 
 0.8.0
 

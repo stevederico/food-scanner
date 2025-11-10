@@ -1,8 +1,8 @@
-import { getSkateboardViteConfig } from '@stevederico/skateboard-ui/Utilities';
+import { getSkateboardViteConfig } from '@stevederico/skateboard-ui/ViteConfig';
 
 const config = await getSkateboardViteConfig();
 
-// Force include react-router and its CommonJS dependencies in optimization for ESM transformation
+// Force include react-router and its CommonJS dependencies in optimization
 config.optimizeDeps.include = [
   ...(config.optimizeDeps.include || []),
   'react-router',
