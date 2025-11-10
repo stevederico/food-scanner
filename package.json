@@ -1,7 +1,7 @@
 {
   "name": "foodscan",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.8.1",
   "type": "module",
   "scripts": {
     "serve": "vite --force --mode development",
@@ -10,20 +10,18 @@
     "prod": "vite build --mode production; cp -r ./dist/* ../bixby-proxy/public/food.bixbyapps.com"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.6",
-    "@stevederico/skateboard-ui": "1.0.9",
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@stevederico/skateboard-ui": "1.2.0",
+    "@tailwindcss/vite": "^4.1.17",
+    "@vitejs/plugin-react-swc": "^4.2.1",
     "@zxing/library": "^0.21.3",
     "lucide-react": "^0.537.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.4",
-    "recharts": "^2.15.1",
+    "react-router-dom": "^7.9.5",
+    "recharts": "^2.15.4",
+    "tailwindcss": "4.1.14",
     "tailwindcss-animate": "^1.0.7",
-    "vite": "^7.1.10"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react-swc": "^4.1.0",
-    "tailwindcss": "4.1.14"
+    "vite": "^7.2.2"
   }
 }

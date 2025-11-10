@@ -30,7 +30,7 @@ export default function HomeView() {
         product = await fetchProduct(searchQuery);
       } else {
         const response = await fetch(
-          `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&json=true&page_size=1`
+          `https://us.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&json=true&page_size=1`
         );
         const data = await response.json();
         if (data.products?.length > 0) {
