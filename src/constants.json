@@ -16,6 +16,11 @@
             "title": "Scan",
             "url": "scan",
             "icon": "camera"
+        },
+        {
+            "title": "Docs",
+            "url": "docs",
+            "icon": "book-open"
         }
     ],
     "stripeProducts": [{
