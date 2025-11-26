@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { ThumbsUp, ThumbsDown } from 'lucide-react';
+import ApprovalBadge from './ApprovalBadge';
 
 export default function ProductDialog({ isOpen, onClose, product, ingredientsList, isApproved, errorMessage }) {
   return (
@@ -21,22 +21,10 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
             <>
               <div className="relative w-full flex justify-center mb-4">
                 <div className="h-64 w-full bg-accent" />
-                <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt="Product" />
+                <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt={product.product_name || 'Product image'} />
                 <div className="absolute inset-0 bg-white/25" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {ingredientsList ? (
-                    isApproved ? (
-                      <div className="flex flex-col items-center">
-                        <ThumbsUp className="size-24 text-green-500" />
-                        <div className="bg-green-500 px-3 py-2 text-white rounded-full my-4">Approved</div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center">
-                        <ThumbsDown className="size-24 text-red-500" />
-                        <div className="bg-red-500 px-3 py-2 text-white rounded-full my-4">Not Approved</div>
-                      </div>
-                    )
-                  ) : null}
+                  {ingredientsList ? <ApprovalBadge isApproved={isApproved} /> : null}
                 </div>
               </div>
               <div className="flex justify-between items-center mb-4">

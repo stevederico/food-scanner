@@ -16,7 +16,7 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
               Recent Scans
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button className="p-2 rounded-full hover:bg-accent">
+              <button aria-label="Close dialog" className="p-2 rounded-full hover:bg-accent">
                 <X className="w-5 h-5" />
               </button>
             </Dialog.Close>
@@ -31,6 +31,7 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
               {recentScans.map(scan => (
                 <button
                   key={scan.id}
+                  aria-label={`View ${scan.name}`}
                   className="bg-accent rounded-lg p-3 text-left hover:ring-2 hover:ring-blue-500 transition-all"
                   onClick={() => onSelectProduct(scan)}
                 >
