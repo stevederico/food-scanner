@@ -8,7 +8,7 @@ import { cors } from 'hono/cors'
 import Stripe from "stripe";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import crypto from "crypto";
+import crypto from "node:crypto";
 
 import { databaseManager } from "./adapters/manager.js";
 import { dirname, resolve } from 'node:path';
@@ -417,11 +417,12 @@ app.use('*', async (c, next) => {
 app.use('*', secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'"],
+    scriptSrc: ["'self'", "'unsafe-inline'", "https://aob.bixbyapps.com", "https://static.cloudflareinsights.com"],
     styleSrc: ["'self'", "'unsafe-inline'"],
-    imgSrc: ["'self'", "https:"],
+    imgSrc: ["'self'", "https:", "data:"],
     fontSrc: ["'self'"],
-    connectSrc: ["'self'"],
+    connectSrc: ["'self'", "https://aob.bixbyapps.com", "https://cloudflareinsights.com"],
+    frameSrc: ["https://www.youtube.com", "https://youtube.com"],
     frameAncestors: ["'none'"]
   },
   strictTransportSecurity: isDevelopment ? false : 'max-age=31536000; includeSubDomains; preload',

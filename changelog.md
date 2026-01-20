@@ -10,6 +10,16 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.9.1
+
+  Add railway.json config
+  Update Dockerfile Alpine
+  Add native module deps
+  Remove healthcheck
+  Fix crypto import
+  Update CSP configuration
+  Update prod script
+
 0.9.0
 
   Add backend workspace
