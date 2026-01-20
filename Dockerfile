@@ -3,15 +3,11 @@ FROM denoland/deno:alpine-2.6.3 AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY backend/package*.json ./backend/
+# Copy all source files first (deno install needs to scan imports)
+COPY . .
 
 # Install dependencies with deno
 RUN deno install && cd backend && deno install
-
-# Copy source code
-COPY . .
 
 # Build frontend
 RUN deno run build

@@ -10,6 +10,12 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.9.2
+
+  Fix Dockerfile build
+  Add .dockerignore
+  Add .env.example
+
 0.9.1
 
   Add railway.json config
