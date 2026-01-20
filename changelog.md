@@ -10,6 +10,21 @@
 - weird water
 - move api requests to backend, move bad_ingredeints to backend too?
 
+0.9.0
+
+  Add backend workspace
+  Add Hono server
+  Add multi-database support
+  Add documentation directory
+  Add Dockerfile
+  Add manifest.json
+  Update skateboard-ui 1.2.18
+  Update CLAUDE.md architecture
+  Update README documentation
+  Update .gitignore rules
+  Remove Claude workflows
+  Remove local settings
+
 0.8.1
 
 FIXED: Search on Home now uses us.openfoodfacts.org, ProductDialog has scrolling
@@ -82,7 +97,7 @@ FIXED: Search on Home now uses us.openfoodfacts.org, ProductDialog has scrolling
 * highlight bad ingredients in red ( check ingredients.json)
 * show ingredients on screen when received from api, product.ingredients
 * added food api
-* added scanning 
+* added scanning
 
 
 
