@@ -1,5 +1,5 @@
 import Header from '@stevederico/skateboard-ui/Header';
-import { ShoppingBag, Scan, Search, Clock, Store, Info, ArrowRight } from 'lucide-react';
+import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import ProductDialog from './ProductDialog';
@@ -102,7 +102,7 @@ export default function HomeView() {
                 aria-label="Search"
                 className="absolute right-2 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150"
               >
-                <Search className="w-5 h-5" />
+                <DynamicIcon name="Search" className="w-5 h-5" />
               </button>
             </div>
           </form>
@@ -116,14 +116,14 @@ export default function HomeView() {
           >
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/20 rounded-xl">
-                <Scan className="w-7 h-7 text-white" />
+                <DynamicIcon name="Scan" className="w-7 h-7 text-white" />
               </div>
               <div className="text-left">
                 <span className="block text-lg font-semibold text-white">Scan Product</span>
                 <span className="block text-sm text-blue-100">Use camera to scan barcode</span>
               </div>
             </div>
-            <ArrowRight className="w-6 h-6 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
+            <DynamicIcon name="ArrowRight" className="w-6 h-6 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
           </Link>
         </div>
 
@@ -131,7 +131,7 @@ export default function HomeView() {
         <div className="mt-10">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
-              <Clock className="w-4 h-4" />
+              <DynamicIcon name="Clock" className="w-4 h-4" />
               Recent Scans
             </h2>
             {recentScans.length > 0 && (
@@ -140,14 +140,14 @@ export default function HomeView() {
                 className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors duration-150"
               >
                 View All
-                <ArrowRight className="w-4 h-4" />
+                <DynamicIcon name="ArrowRight" className="w-4 h-4" />
               </button>
             )}
           </div>
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
             {recentScans.length === 0 ? (
               <div className="w-full py-8 text-center text-gray-400 dark:text-gray-500">
-                <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <DynamicIcon name="ShoppingBag" className="w-10 h-10 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No recent scans yet</p>
               </div>
             ) : (
@@ -167,7 +167,7 @@ export default function HomeView() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-7 h-7 text-blue-500" />
+                        <DynamicIcon name="ShoppingBag" className="w-7 h-7 text-blue-500" />
                       </div>
                     )}
                   </div>
@@ -182,16 +182,16 @@ export default function HomeView() {
         {/* <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Store className="w-5 h-5" />
+              <DynamicIcon name="Store" className="w-5 h-5" />
               Popular Stores
             </h2>
-            <ArrowRight className="w-5 h-5 text-gray-400" />
+            <DynamicIcon name="ArrowRight" className="w-5 h-5 text-gray-400" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             {['Costco', 'Trader Joe\'s', 'Whole Foods'].map(store => (
               <div key={store} className="bg-accent p-4 rounded-lg shadow-sm">
                 <div className="flex items-center gap-1">
-                  <ShoppingBag className="w-6 h-6 text-green-500" />
+                  <DynamicIcon name="ShoppingBag" className="w-6 h-6 text-green-500" />
                   <span className="font-medium">{store}</span>
                 </div>
               </div>
@@ -203,7 +203,7 @@ export default function HomeView() {
         <div className="mt-10 bg-accent rounded-2xl p-5 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Info className="w-4 h-4 text-blue-500" />
+              <DynamicIcon name="Info" className="w-4 h-4 text-blue-500" />
             </div>
             <h2 className="text-base font-semibold">Ingredients Guide</h2>
           </div>

@@ -1,5 +1,5 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { Clock, ShoppingBag, X } from 'lucide-react';
+import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 
 export default function RecentScansDialog({ isOpen, onClose, recentScans, onSelectProduct }) {
   return (
@@ -12,12 +12,12 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
         >
           <div className="flex items-center justify-between mb-6">
             <Dialog.Title className="text-xl font-semibold flex items-center gap-2">
-              <Clock className="w-5 h-5" />
+              <DynamicIcon name="Clock" className="w-5 h-5" />
               Recent Scans
             </Dialog.Title>
             <Dialog.Close asChild>
               <button aria-label="Close dialog" className="p-2 rounded-full hover:bg-accent">
-                <X className="w-5 h-5" />
+                <DynamicIcon name="X" className="w-5 h-5" />
               </button>
             </Dialog.Close>
           </div>
@@ -44,7 +44,7 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-8 h-8 text-blue-500" />
+                        <DynamicIcon name="ShoppingBag" className="w-8 h-8 text-blue-500" />
                       </div>
                     )}
                   </div>
