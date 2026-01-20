@@ -1,260 +1,320 @@
-# BXFood (Food Scan)
+<div align="center">
+  <a href="#" />
+    <img alt="Skateboard - Ship your React app in minutes" width="40%" src="https://github.com/user-attachments/assets/b7f2b098-503b-4439-8454-7eb45ae82307">
+  </a>
+  </div>
 
-**Watch What You Eat** - A smart food scanning application that helps you make healthier choices by analyzing product ingredients in real-time.
+  <p align="center" style="margin-top: 40px; margin-bottom: 5px;">
+    <img src="public/icons/icon.png" width="60" height="60" alt="Skateboard Logo">
+  </p>
+  <h1 align="center" style="border-bottom: none; margin-bottom: 0;">Skateboard</h1>
+  <h3 align="center" style="margin-top: 0; font-weight: normal;">
+    a react starter with auth, stripe, shadcn, and sqlite
+  </h3>
+    <p align="center">
+    <a href="https://opensource.org/licenses/mit">
+      <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License">
+    </a>
+    <a href="https://github.com/stevederico/skateboard/stargazers">
+      <img src="https://img.shields.io/github/stars/stevederico/skateboard?style=social" alt="GitHub stars">
+    </a>
+    <a href="https://www.npmjs.com/package/create-skateboard-app">
+      <img src="https://img.shields.io/npm/v/create-skateboard-app?color=green" alt="npm version">
+    </a>
+  </p>
 
-## Overview
+## 🎬 Demo
 
-BXFood is a React-based web application that enables users to scan barcodes or search for food products to instantly analyze their ingredients. Using data from the Open Food Facts API and a comprehensive local ingredient database, the app color-codes ingredients as safe (green), caution (yellow), or avoid (red), making it easy to identify potentially harmful substances in your food.
+<div align="center">
+  <img width="75%" alt="landing" src="https://github.com/user-attachments/assets/db1d9cb7-e398-4c87-a245-14371f37a38b" />
+</div>
 
-## Features
+  <br />
+ 
 
-- **🔍 Barcode Scanning** - Use your device camera to scan product barcodes for instant ingredient analysis
-- **🔎 Product Search** - Search for products by name or barcode number
-- **⚠️ Ingredient Analysis** - Automatic identification of harmful ingredients with health recommendations
-- **📊 Color-Coded Results** - Visual indicators (green/yellow/red) based on ingredient safety
-- **📱 Recent Scans** - Track your scanning history for easy reference
-- **🌓 Dark Mode** - Built-in dark mode support for comfortable viewing
+</div>
 
-## Tech Stack
+<br />
 
-### Frontend
-- **React 19** - Modern UI library with latest features
-- **Vite 7** - Next-generation frontend build tool
-- **React Router v7** - Declarative routing for React
-- **@stevederico/skateboard-ui** - Custom UI framework for app scaffolding
-
-### Styling
-- **Tailwind CSS v4** - Utility-first CSS framework
-- **@tailwindcss/vite** - Official Tailwind Vite plugin
-- **tailwindcss-animate** - Animation utilities
-
-### Libraries
-- **@zxing/library** - Barcode scanning functionality
-- **lucide-react** - Beautiful icon set
-- **recharts** - Charting library for data visualization
-- **@radix-ui/react-dialog** - Accessible dialog components
-
-### Runtime
-- **Deno** - Modern JavaScript/TypeScript runtime
-
-## Installation
-
-### Prerequisites
-- [Deno](https://deno.land/) installed on your system
-
-### Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/stevederico/BXFood.git
-   cd BXFood
-   ```
-
-2. **Install dependencies**
-   ```bash
-   deno install
-   ```
-
-3. **Start the development server**
-   ```bash
-   deno run start
-   # or
-   deno run dev
-   ```
-
-4. **Open your browser**
-   ```
-   Navigate to http://localhost:5173 (or the port shown in terminal)
-   ```
-
-## Usage
-
-### Scanning Products
-
-1. **Via Camera**
-   - Click the "Scan" button in the navigation
-   - Allow camera permissions when prompted
-   - Point your camera at a product barcode
-   - The app will automatically scan and analyze the product
-
-2. **Via Search**
-   - Enter a product name or barcode number in the search field
-   - Click search or press Enter
-   - View the analyzed results in the product dialog
-
-### Understanding Results
-
-- **🟢 Green Ingredients** - Safe to consume (baddness_score: 1)
-- **🟡 Yellow Ingredients** - Use with caution (baddness_score: 5)
-- **🔴 Red Ingredients** - Recommended to avoid (baddness_score: 10)
-
-Products are marked as "Not Approved" if they contain any ingredient with a red rating or baddness_score > 5.
-
-## Project Structure
-
-```
-BXFood/
-├── src/
-│   ├── components/
-│   │   ├── HomeView.jsx           # Home page with search and recent scans
-│   │   ├── ScanView.jsx            # Camera barcode scanner
-│   │   ├── ProductDialog.jsx       # Product details modal
-│   │   ├── IngredientRenderer.jsx  # Ingredient color-coding logic
-│   │   └── RecentScansDialog.jsx   # Recent scans history
-│   ├── services/
-│   │   └── ProductService.js       # Open Food Facts API integration
-│   ├── assets/
-│   │   └── styles.css              # Custom styles and theme variables
-│   ├── constants.json              # App configuration
-│   └── main.jsx                    # App entry point
-├── bad_ingredients.json            # Ingredient safety database (390+ entries)
-├── vite.config.js                  # Vite configuration
-├── package.json                    # Dependencies
-├── CLAUDE.md                       # AI assistant guidance
-└── README.md                       # This file
-```
-
-## Key Components
-
-### HomeView
-The main landing page featuring:
-- Product search functionality (by name or barcode)
-- Recent scans list
-- Quick access to scanner
-
-### ScanView
-Camera-based barcode scanner:
-- Uses @zxing/library for barcode detection
-- Supports multiple barcode formats
-- Real-time scanning feedback
-
-### ProductDialog
-Modal displaying:
-- Product name and image
-- Complete ingredient list with color coding
-- Approval status
-- Individual ingredient descriptions
-
-### IngredientRenderer
-Core analysis component:
-- Matches ingredients against `bad_ingredients.json`
-- Color-codes each ingredient
-- Exports `checkIsApproved()` function for product validation
-
-## Data Sources
-
-### Open Food Facts API
-- **Endpoint**: `https://us.openfoodfacts.org/api/v2/product/{barcode}`
-- **Purpose**: Retrieve product information, images, and ingredient lists
-- **License**: Open Database License (ODbL)
-
-### Bad Ingredients Database
-Located in `bad_ingredients.json`, this database contains:
-- 390+ ingredients
-- Color ratings (green/yellow/red)
-- Baddness scores (1-10)
-- Health descriptions for each ingredient
-
-## Development
-
-### Available Commands
+## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+npx create-skateboard-app
+```
+
+That's it, your app is now running at `http://localhost:5173` 🎉
+
+<br />
+
+## ✨ What's Included
+
+Everything you need to ship a production-ready app:
+
+### 🏗️ **Application Shell Architecture (v1.0)**
+- **95% less boilerplate** - Focus on features, not infrastructure
+- **Shell + Content + Config** - Framework provides structure, you provide content
+- **Update once, fix everywhere** - All apps inherit improvements from skateboard-ui
+- **16-line main.jsx** - Just define your routes
+- **Convention over configuration** - Sensible defaults with escape hatches everywhere
+
+### 🔐 **Authentication & User Management**
+- **Sign up / Sign in** with JWT tokens
+- **Protected routes** with automatic redirects
+- **User context** management across your app
+- **Session persistence** with secure cookies
+- **App-specific auth isolation**
+- **Usage tracking** with configurable limits for free users
+
+### 💳 **Stripe Integration**
+- **Checkout flows** ready to go
+- **Subscription management** portal
+- **Webhook handling** for payment events
+- **Customer portal** integration
+
+### 🎨 **Beautiful UI Components**
+- **50+ Shadcn/ui components** pre-configured
+- **Dark/Light mode** with system detection
+- **Mobile-ready design** with responsive sidebar and TabBar
+- **Landing page** that converts - fully customizable via constants.json
+- **Settings page** with user management
+- **Legal pages** (Terms, Privacy, EULA)
+
+### 🛠️ **Developer Experience**
+- **Hot Module Replacement** with Vite 7.1+
+- **Zero config** - just works out of the box
+- **Multi-database support** - SQLite (default), MongoDB, PostgreSQL
+- **constants.json** - customize everything in one place
+- **Modern JavaScript** - no TypeScript complexity
+- **Built-in hooks** - useListData, useForm for common patterns
+- **API utilities** - apiRequest with automatic auth and error handling
+
+<br />
+
+
+
+
+
+## 📖 Frontend Configuration
+
+Update `src/constants.json` to customize your app:
+
+```json
+{
+  "appName": "Your App Name",
+  "tagline": "Your Tagline", 
+  "cta": "Get Started"
+}
+```
+
+## 📖 Backend Configuration
+
+**Database Configuration** - Update `backend/config.json`:
+
+```json
+{
+  "client": "http://localhost:5173",
+  "database": {
+    "db": "MyApp",
+    "dbType": "sqlite",
+    "connectionString": "./databases/MyApp.db"
+  }
+}
+```
+
+Update to `backend/.env`:
+
+```bash
+# Sqlite remove below
+MONGODB_URL=mongodb+srv://user:pass@example-cluster.example.net/
+POSTGRES_URL=postgresql://user:pass@example-hostname:5432/myapp
+```
+
+**Auth Variables** - Update to `backend/.env`:
+enter a unique random string below
+
+```bash
+JWT_SECRET=your-secret-key
+FREE_USAGE_LIMIT=20  # Optional: Monthly usage limit for free users (default: 20)
+```
+
+**Supported Database Types:**
+- **SQLite** (default): `"dbType": "sqlite"`
+- **PostgreSQL**: `"dbType": "postgresql"` with `"connectionString": "${POSTGRES_URL}"`
+- **MongoDB**: `"dbType": "mongodb"` with `"connectionString": "${MONGODB_URL}"` with `"db": "SkateboardApp"`
+
+<br />
+
+## 💳 Stripe Setup
+
+To enable payments, configure your Stripe products:
+
+1. **Create Product in Stripe Dashboard**
+   - Go to **Product Catalog** → **Create Product**
+   - Add **Name** and **Amount**
+   - Click **More Pricing Options**
+   - Scroll to **Lookup Key** at bottom
+   - Enter: `my_lookup_key`
+   - *This allows future pricing changes on stripe.com without updating your code*
+
+2. **Update Environment Variables**
+   ```bash
+   STRIPE_KEY=sk_live_your_secret_key
+   ```
+   
+   **Security Note:** Use your secret key OR create a restricted key with these permissions:
+   - **Read/Write:** Checkout Sessions
+   - **Read:** Customers, Prices, Products
+
+3. **Setup Webhook**
+   - Go to **stripe.com** → **Developers** (lower left) → **Webhooks**
+   - Click **Add Endpoint**
+   - Add your endpoint URL: `https://yourdomain.com/payment`
+   - Select these events:
+     - `customer.subscription.created` - Customer signed up for new plan
+     - `customer.subscription.deleted` - Customer's subscription ends  
+     - `customer.subscription.updated` - Subscription changes (plan switch, trial to active, etc.)
+   - Copy the **Signing Secret** to your environment:
+   ```bash
+   STRIPE_ENDPOINT_SECRET=whsec_your_webhook_secret
+   ```
+
+
+## 📈 Scaling Notes
+
+The default configuration uses in-memory stores for rate limiting and CSRF tokens. This works great for single-instance deployments.
+
+**For horizontal scaling** (multiple server instances):
+- Replace in-memory rate limiter with Redis
+- Move CSRF tokens to database or Redis
+- Use sticky sessions or shared session store
+
+See [Architecture Documentation](docs/ARCHITECTURE.md#scaling) for details.
+
+## 🏗️ Tech Stack
+
+Built with the latest and greatest:
+
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| **React** | v19 | UI Framework |
+| **skateboard-ui** | v1.2+ | Application Shell Framework |
+| **Vite** | v7.1+ | Build Tool & Dev Server |
+| **Tailwind CSS** | v4.1+ | Styling |
+| **Shadcn/ui** | Latest | Component Library |
+| **React Router** | v7.8+ | Routing |
+| **Hono** | v4+ | Backend Server |
+| **Deno** | v2.3+ | Runtime |
+| **Multi-Database** | Latest | SQLite, PostgreSQL, MongoDB |
+| **Stripe** | Latest | Payments |
+| **JWT** | Latest | Authentication |
+
+<br />
+
+## 📚 Architecture
+
+Skateboard uses an **Application Shell Architecture** where the framework (skateboard-ui) provides structure and your app provides content.
+
+**Your app in 3 parts:**
+1. **Shell** (skateboard-ui) - Routing, auth, context, utilities
+2. **Content** (your code) - Components and business logic
+3. **Config** (constants.json) - App-specific settings
+
+**Example main.jsx** (complete app):
+```javascript
+import { createSkateboardApp } from '@stevederico/skateboard-ui/App';
+import constants from './constants.json';
+import HomeView from './components/HomeView.jsx';
+
+const appRoutes = [
+  { path: 'home', element: <HomeView /> }
+];
+
+createSkateboardApp({ constants, appRoutes });
+```
+
+That's it! The shell handles routing, auth, layout, landing page, sign in/up, settings, payment, and all legal pages.
+
+**Learn more:**
+- [Architecture Documentation](docs/ARCHITECTURE.md) - Deep dive into the shell pattern
+- [Migration Guide](docs/MIGRATION.md) - Upgrade from any version
+
+<br />
+
+## 🚀 Deployment
+
+See the [Deployment Guide](docs/DEPLOY.md) for step-by-step instructions:
+
+- **Vercel** - Deploy both frontend and backend together (recommended)
+- **Render** - Separate frontend and backend services
+- **Netlify + Railway** - Netlify frontend with Railway backend
+- **Docker** - Container deployment with included Dockerfile
+
+<br />
+
+## 🤝 Contributing
+
+We love contributions!
+
+```bash
+# Fork the repo, then:
+git clone https://github.com/YOUR_USERNAME/skateboard
+cd skateboard
 deno install
-
-# Start development server
 deno run start
-# or
-deno run dev
-
-# Build for development
-deno run build
-
-# Build for production
-deno run prod
 ```
 
-### Configuration
+<br />
 
-App settings are stored in `src/constants.json`:
-- App name, icon, and tagline
-- Navigation routes
-- Backend URLs (development and production)
-- Subscription details
-- Legal documents (Terms, Privacy, EULA)
+## 📬 Community & Support
 
-### Styling
+- **🐦 X**: [@stevederico](https://x.com/stevederico)
+- **🐛 Issues**: [GitHub Issues](https://github.com/stevederico/skateboard/issues)
 
-The app uses Tailwind CSS with custom theme variables:
-- Defined in `src/assets/styles.css`
-- App color: `--color-app`
-- Supports dark mode via `bg-background` and `bg-accent` utilities
+<br />
 
-## API Integration
+## 🙏 Acknowledgements
 
-### Fetching Products
+Built on the shoulders of giants:
 
-```javascript
-import { fetchProduct, addToRecentScans } from './services/ProductService';
+- [React](https://react.dev) - The library that powers the web
+- [Vite](https://vitejs.dev) - Lightning fast build tool
+- [Tailwind CSS](https://tailwindcss.com) - Utility-first CSS
+- [Shadcn/ui](https://ui.shadcn.com) - Beautiful components
+- [Stripe](https://stripe.com) - Payment infrastructure
 
-// Fetch by barcode
-const product = await fetchProduct('123456789');
+<br />
 
-// Add to recent scans
-addToRecentScans(product);
-```
+## 🎪 Related Projects
 
-### Checking Ingredient Safety
+- [skateboard-ui](https://github.com/stevederico/skateboard-ui) - Component library
+- [skateboard-blog](https://github.com/stevederico/skateboard-blog) - Blog template
+- [create-skateboard-app](https://github.com/stevederico/create-skateboard-app) - CLI tool
 
-```javascript
-import { checkIsApproved } from './components/IngredientRenderer';
+<br />
 
-const ingredientsString = "water, sugar, citric acid";
-const isApproved = checkIsApproved(ingredientsString);
-// Returns false if any ingredient is red or has baddness_score > 5
-```
 
-## Production Build
-
-The production build includes a custom deployment step:
+## 🚀 Ready to Ship?
 
 ```bash
-deno run prod
+npx create-skateboard-app
 ```
 
-This command:
-1. Builds the app for production
-2. Copies the dist folder to `../bixby-proxy/public/food.bixbyapps.com`
+<br />
 
-## Contributing
+## 📄 License
 
-Contributions are welcome! Please follow these guidelines:
+MIT License - use it however you want! See [LICENSE](LICENSE) for details.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is private and proprietary.
-
-## Support
-
-For questions, issues, or feature requests:
-- **Email**: support@bixbyapps.com
-- **Company**: Bixby Apps, LLC
-- **Website**: www.bixbyapps.com
-
-## Acknowledgments
-
-- [Open Food Facts](https://world.openfoodfacts.org/) - Product database and API
-- [@zxing/library](https://github.com/zxing-js/library) - Barcode scanning
-- [@stevederico/skateboard-ui](https://www.npmjs.com/package/@stevederico/skateboard-ui) - UI framework
-- [Lucide Icons](https://lucide.dev/) - Icon set
+<br />
 
 ---
 
-**Made with ❤️ by Bixby Apps, LLC**
+<div align="center">
+  <p>
+    Built with ❤️ by <a href="https://github.com/stevederico">Steve Derico</a> and contributors
+  </p>
+  
+  <p>
+    <a href="https://github.com/stevederico/skateboard">⭐ Star us on GitHub</a> — it helps!
+  </p>
+</div>

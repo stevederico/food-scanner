@@ -1,27 +1,32 @@
 {
-  "name": "foodscan",
-  "private": true,
-  "version": "0.8.1",
+  "name": "BXFood",
+  "private": false,
+  "version": "0.9.0",
+  "skateboardVersion": "1.2.1",
   "type": "module",
+  "workspaces": [
+    "backend"
+  ],
   "scripts": {
-    "serve": "vite --force --mode development",
-    "start": "vite --force --mode development",
-    "build": "vite build --mode development;",
-    "prod": "vite build --mode production; cp -r ./dist/* ../bixby-proxy/public/food.bixbyapps.com"
+    "start": "npm run front & npm run server",
+    "front": "vite --force --mode development",
+    "server": "npm run --workspace=backend start",
+    "build": "vite build --mode production",
+    "prod": "vite build --mode production",
+    "install-all": "npm install && npm install --workspace=backend"
   },
   "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.15",
-    "@stevederico/skateboard-ui": "1.2.0",
-    "@tailwindcss/vite": "^4.1.17",
-    "@vitejs/plugin-react-swc": "^4.2.1",
+    "@stevederico/skateboard-ui": "1.2.18",
     "@zxing/library": "^0.21.3",
-    "lucide-react": "^0.537.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^7.9.5",
-    "recharts": "^2.15.4",
-    "tailwindcss": "4.1.14",
-    "tailwindcss-animate": "^1.0.7",
-    "vite": "^7.2.2"
+    "react-router-dom": "^7.9.4",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react-swc": "^4.1.0",
+    "tailwindcss": "^4.1.14",
+    "vite": "^7.1.10"
   }
 }

@@ -1,13 +1,27 @@
+/**
+ * Application entry point using Skateboard Application Shell Architecture
+ *
+ * Configures routing and initializes app with skateboard-ui framework.
+ * The shell (skateboard-ui) provides:
+ * - Routing system with React Router v7
+ * - Context/state management
+ * - Authentication flow
+ * - Common UI components (Header, Footer, UpgradeSheet)
+ * - Utility functions (apiRequest, usage tracking)
+ *
+ * This file only defines:
+ * - Custom view components
+ * - Route configuration
+ * - App constants
+ *
+ * @see {@link https://github.com/stevederico/skateboard|Skateboard Docs}
+ */
 import './assets/styles.css';
 import { createSkateboardApp } from '@stevederico/skateboard-ui/App';
-import { initializeUtilities } from '@stevederico/skateboard-ui/Utilities';
 import constants from './constants.json';
 import HomeView from './components/HomeView.jsx';
 import ScanView from './components/ScanView.jsx';
 import DocsView from './components/DocsView.jsx';
-
-// Initialize utilities before creating app
-initializeUtilities(constants);
 
 const appRoutes = [
   { path: 'home', element: <HomeView /> },

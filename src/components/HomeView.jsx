@@ -80,7 +80,7 @@ export default function HomeView() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-yellow-500">
+    <div className="flex flex-col min-h-screen bg-background">
       <Header buttonClass="" title="Welcome" />
       
       <main className="flex-1 px-4 pb-20">
