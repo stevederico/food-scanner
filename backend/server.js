@@ -355,7 +355,7 @@ app.use('*', secureHeaders({
   xContentTypeOptions: 'nosniff',
   referrerPolicy: 'strict-origin-when-cross-origin',
   permissionsPolicy: {
-    camera: [],
+    camera: ["self"],
     microphone: [],
     geolocation: [],
     payment: []
