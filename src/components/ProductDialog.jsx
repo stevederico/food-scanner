@@ -1,15 +1,17 @@
-import * as Dialog from '@radix-ui/react-dialog';
+import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
 import ApprovalBadge from './ApprovalBadge';
 
 export default function ProductDialog({ isOpen, onClose, product, ingredientsList, isApproved, errorMessage }) {
   return (
-    <Dialog.Root open={isOpen} onOpenChange={onClose}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-        <Dialog.Content onOpenAutoFocus={(event) => event.preventDefault()} className="fixed bottom-0 left-0 right-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 data-[state=closed]:animate-out data-[state=open]:animate-in max-h-[calc(100vh-6rem)] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent
+        onOpenAutoFocus={(event) => event.preventDefault()}
+        showCloseButton={false}
+        className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
+      >
           {errorMessage ? (
             <>
-              <Dialog.Title className="text-xl font-semibold text-center mb-4">{errorMessage}</Dialog.Title>
+              <DialogTitle className="text-xl font-semibold text-center mb-4">{errorMessage}</DialogTitle>
               <button
                 className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                 onClick={onClose}
@@ -28,7 +30,7 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
                 </div>
               </div>
               <div className="flex justify-between items-center mb-4">
-                <Dialog.Title className="text-xl font-semibold">{product.product_name}</Dialog.Title>
+                <DialogTitle className="text-xl font-semibold">{product.product_name}</DialogTitle>
               </div>
               <div className="flex flex-wrap mb-4 capitalize">{ingredientsList}</div>
               <div className="mt-6 flex">
@@ -41,8 +43,7 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
               </div>
             </>
           )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+      </DialogContent>
+    </Dialog>
   );
 }

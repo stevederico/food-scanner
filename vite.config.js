@@ -2,9 +2,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [
@@ -13,41 +10,60 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@package': path.resolve(__dirname, './package.json'),
-      '@root': path.resolve(__dirname, './')
+      '@': path.resolve(process.cwd(), './src'),
+      '@package': path.resolve(process.cwd(), 'package.json'),
+      '@root': path.resolve(process.cwd()),
+      'react/jsx-runtime': path.resolve(process.cwd(), 'node_modules/react/jsx-runtime.js')
     }
   },
   optimizeDeps: {
     include: [
       'react',
       'react-dom',
-      'react-router',
+      'react-dom/client',
+      '@radix-ui/react-slot',
       'react-router-dom',
+      'react-router',
       'cookie',
       'set-cookie-parser'
     ],
+    force: true,
     exclude: [
       '@swc/core',
-      '@tailwindcss/oxide'
-    ]
+      '@swc/core-darwin-arm64',
+      '@swc/wasm',
+      '@tailwindcss/oxide',
+      '@tailwindcss/oxide-darwin-arm64',
+      '@tailwindcss/oxide-darwin-x64',
+      '@tailwindcss/oxide-linux-x64-gnu',
+      '@tailwindcss/oxide-linux-x64-musl',
+      '@tailwindcss/oxide-win32-x64-msvc',
+      'lightningcss',
+      'fsevents'
+    ],
+    esbuildOptions: {
+      target: 'esnext',
+      define: {
+        global: 'globalThis'
+      }
+    }
   },
   build: {
     rollupOptions: {
       external: [
         /\.node$/,
-        '@tailwindcss/oxide'
+        /@tailwindcss\/oxide/
       ]
     }
   },
   server: {
     host: 'localhost',
     port: 5173,
-    watch: {
-      usePolling: false
-    },
     hmr: {
       overlay: false
+    },
+    watch: {
+      usePolling: false
     }
   }
 });
