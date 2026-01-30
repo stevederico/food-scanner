@@ -22,6 +22,7 @@ WORKDIR /app
 
 # Set production environment
 ENV NODE_ENV=production
+ENV ENV=production
 
 # Copy built frontend
 COPY --from=builder /app/dist ./dist
