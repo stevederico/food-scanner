@@ -1,3 +1,7 @@
+0.9.3
+
+  Update Dockerfile node:22-alpine
+
 
 - coupons
 - add my allgerens to bad ingredients list
