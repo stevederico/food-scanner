@@ -1092,42 +1092,44 @@ function loadLocalENV() {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   const envFilePath = resolve(__dirname, './.env');
+  const envLocalPath = resolve(__dirname, './.env.local');
   const envExamplePath = resolve(__dirname, './.env.example');
 
   // Check if .env exists, if not create it from .env.example
   try {
     statSync(envFilePath);
   } catch (err) {
-    // .env doesn't exist, try to create it from .env.example
     try {
       const exampleData = readFileSync(envExamplePath, 'utf8');
       writeFileSync(envFilePath, exampleData);
     } catch (exampleErr) {
-      console.error('Failed to create .env from template:', exampleErr);
+      console.error('Failed to create .env from template', { error: exampleErr.message });
       return;
     }
   }
 
+  // Load .env (may be symlink to shared creds)
+  loadEnvFile(envFilePath);
+
+  // Load .env.local overrides (project-specific, optional)
+  loadEnvFile(envLocalPath);
+}
+
+function loadEnvFile(filePath) {
   try {
-    const data = readFileSync(envFilePath, 'utf8');
-    const lines = data.split(/\r?\n/);
-    for (let line of lines) {
+    const data = readFileSync(filePath, 'utf8');
+    for (let line of data.split(/\r?\n/)) {
       if (!line || line.trim().startsWith('#')) continue;
-
-      // Split only on first = and handle quoted values
       let [key, ...valueParts] = line.split('=');
-      let value = valueParts.join('='); // Rejoin in case value contains =
-
+      let value = valueParts.join('=');
       if (key && value) {
         key = key.trim();
-        value = value.trim();
-        // Remove surrounding quotes if present
-        value = value.replace(/^["']|["']$/g, '');
+        value = value.trim().replace(/^["']|["']$/g, '');
         process.env[key] = value;
       }
     }
-  } catch (err) {
-    console.error('Failed to load .env file:', err);
+  } catch {
+    // File doesn't exist or unreadable — silent
   }
 }
 
