@@ -1,3 +1,7 @@
+0.10.0
+
+  Add analytics data-domains
+
 0.9.3
 
   Update Dockerfile node:22-alpine
