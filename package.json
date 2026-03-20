@@ -2,7 +2,7 @@
   "name": "BXFood",
   "private": false,
   "version": "0.9.3",
-  "skateboardVersion": "2.26.0",
+  "skateboardVersion": "2.28.0",
   "type": "module",
   "workspaces": [
     "backend"
