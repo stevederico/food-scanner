@@ -13,6 +13,7 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
             <>
               <DialogTitle className="text-xl font-semibold text-center mb-4">{errorMessage}</DialogTitle>
               <button
+                data-umami-event="product-try-again"
                 className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                 onClick={onClose}
               >
@@ -35,6 +36,7 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
               <div className="flex flex-wrap mb-4 capitalize">{ingredientsList}</div>
               <div className="mt-6 flex">
                 <button
+                  data-umami-event="product-dialog-close"
                   className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                   onClick={onClose}
                 >

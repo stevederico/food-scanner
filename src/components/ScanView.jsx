@@ -69,7 +69,7 @@ export default function ScanView() {
   }, []);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden">
+    <div className="relative h-screen w-screen overflow-hidden" data-section-id="barcode-scanner">
       <video ref={videoRef} className="w-full h-full object-cover absolute inset-0" />
 
       <Dialog open={open} onOpenChange={(isOpen) => {
@@ -85,6 +85,7 @@ export default function ScanView() {
             <>
               <DialogTitle className="text-xl font-semibold text-center mb-4">{errorMessage}</DialogTitle>
               <button
+                data-umami-event="scan-again-error"
                 className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                 onClick={() => { setOpen(false); reset(); }}
               >
@@ -109,6 +110,7 @@ export default function ScanView() {
               </div>
               <div className="mt-6 flex">
                 <button
+                  data-umami-event="scan-again-success"
                   className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                   onClick={() => { setOpen(false); reset(); }}
                 >
