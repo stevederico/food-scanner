@@ -8,7 +8,7 @@ export default function DocsView() {
 
       <main className="flex-1 px-4 pb-20">
         {/* App Overview */}
-        <section className="mt-6">
+        <section className="mt-6" data-section-id="docs-overview">
           <div className="flex items-center gap-2 mb-3">
             <DynamicIcon name="BookOpen" className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">About Food Scan</h2>
@@ -24,7 +24,7 @@ export default function DocsView() {
         </section>
 
         {/* How to Use */}
-        <section className="mt-6">
+        <section className="mt-6" data-section-id="docs-how-to-use">
           <div className="flex items-center gap-2 mb-3">
             <DynamicIcon name="Info" className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">How to Use</h2>
@@ -56,7 +56,7 @@ export default function DocsView() {
         </section>
 
         {/* Ingredient Color Guide */}
-        <section className="mt-6">
+        <section className="mt-6" data-section-id="docs-color-guide">
           <div className="flex items-center gap-2 mb-3">
             <DynamicIcon name="AlertCircle" className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">Ingredient Color Guide</h2>
@@ -96,7 +96,7 @@ export default function DocsView() {
         </section>
 
         {/* Approval Status */}
-        <section className="mt-6">
+        <section className="mt-6" data-section-id="docs-approval-status">
           <div className="flex items-center gap-2 mb-3">
             <DynamicIcon name="CheckCircle" className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">Product Approval</h2>
@@ -111,7 +111,7 @@ export default function DocsView() {
         </section>
 
         {/* About Bixby Apps */}
-        <section className="mt-6 mb-8">
+        <section className="mt-6 mb-8" data-section-id="docs-about">
           <div className="flex items-center gap-2 mb-3">
             <DynamicIcon name="BookOpen" className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">About Bixby Apps</h2>
@@ -124,13 +124,13 @@ export default function DocsView() {
             <div className="text-sm space-y-1">
               <p>
                 <span className="font-medium">Website:</span>{' '}
-                <a href="https://www.bixbyapps.com" className="text-blue-500 underline">
+                <a href="https://www.bixbyapps.com" data-umami-event="visit-website-link" className="text-blue-500 underline">
                   www.bixbyapps.com
                 </a>
               </p>
               <p>
                 <span className="font-medium">Support:</span>{' '}
-                <a href="mailto:support@bixbyapps.com" className="text-blue-500 underline">
+                <a href="mailto:support@bixbyapps.com" data-umami-event="contact-support-link" className="text-blue-500 underline">
                   support@bixbyapps.com
                 </a>
               </p>

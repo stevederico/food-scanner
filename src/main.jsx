@@ -19,6 +19,7 @@
 import './assets/styles.css';
 import { createSkateboardApp } from '@stevederico/skateboard-ui/App';
 import constants from './constants.json';
+import AnalyticsProvider from './components/AnalyticsProvider.jsx';
 import HomeView from './components/HomeView.jsx';
 import ScanView from './components/ScanView.jsx';
 import DocsView from './components/DocsView.jsx';
@@ -32,5 +33,6 @@ const appRoutes = [
 createSkateboardApp({
   constants,
   appRoutes,
-  defaultRoute: 'home'
+  defaultRoute: 'home',
+  wrapper: AnalyticsProvider
 });

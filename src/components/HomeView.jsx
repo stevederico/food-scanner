@@ -85,7 +85,7 @@ export default function HomeView() {
       
       <main className="flex-1 px-4 pb-20">
         {/* Search Section */}
-        <div className="mt-6 space-y-3">
+        <div className="mt-6 space-y-3" data-section-id="product-search">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Find a Product</h2>
           <form onSubmit={handleSearch}>
             <div className="relative flex items-center">
@@ -100,6 +100,7 @@ export default function HomeView() {
               <button
                 type="submit"
                 aria-label="Search"
+                data-umami-event="search-product"
                 className="absolute right-2 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150"
               >
                 <DynamicIcon name="Search" className="w-5 h-5" />
@@ -109,9 +110,10 @@ export default function HomeView() {
         </div>
 
         {/* Scan Button - Primary CTA */}
-        <div className="mt-8">
+        <div className="mt-8" data-section-id="scan-cta">
           <Link
             to="/app/scan"
+            data-umami-event="scan-product-cta"
             className="group flex items-center justify-between p-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
           >
             <div className="flex items-center gap-4">
@@ -128,7 +130,7 @@ export default function HomeView() {
         </div>
 
         {/* Recent Scans */}
-        <div className="mt-10">
+        <div className="mt-10" data-section-id="recent-scans">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
               <DynamicIcon name="Clock" className="w-4 h-4" />
@@ -137,6 +139,7 @@ export default function HomeView() {
             {recentScans.length > 0 && (
               <button
                 onClick={() => setIsRecentScansOpen(true)}
+                data-umami-event="view-all-recent-scans"
                 className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors duration-150"
               >
                 View All
@@ -155,6 +158,7 @@ export default function HomeView() {
                 <button
                   key={scan.id}
                   aria-label={`View ${scan.name}`}
+                  data-umami-event="select-recent-scan"
                   className="flex-shrink-0 w-28 bg-accent rounded-xl p-2.5 hover:scale-[1.03] active:scale-[0.97] transition-transform duration-150"
                   onClick={() => handleSelectRecentScan(scan)}
                 >
@@ -200,7 +204,7 @@ export default function HomeView() {
         </div> */}
 
         {/* Ingredients Guide */}
-        <div className="mt-10 bg-accent rounded-2xl p-5 border border-gray-200 dark:border-gray-700">
+        <div className="mt-10 bg-accent rounded-2xl p-5 border border-gray-200 dark:border-gray-700" data-section-id="ingredients-guide">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <DynamicIcon name="Info" className="w-4 h-4 text-blue-500" />

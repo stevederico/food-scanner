@@ -26,11 +26,12 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
             No recent scans yet. Start scanning products!
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4" data-section-id="recent-scans-grid">
             {recentScans.map(scan => (
               <button
                 key={scan.id}
                 aria-label={`View ${scan.name}`}
+                data-umami-event="select-recent-scan-dialog"
                 className="bg-accent rounded-lg p-3 text-left hover:ring-2 hover:ring-blue-500 transition-all"
                 onClick={() => onSelectProduct(scan)}
               >
@@ -55,6 +56,7 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
 
         <div className="mt-6">
           <button
+            data-umami-event="recent-scans-dialog-close"
             className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
             onClick={onClose}
           >
