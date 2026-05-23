@@ -1,3 +1,11 @@
+0.12.0
+
+  Upgrade skateboard to 3.4.0
+  Upgrade skateboard-ui to 3.7.0, react to 19.2.6, vite to 8.0.13
+  Migrate react-router-dom to react-router, lucide-react to skateboard-ui/icons
+  Drop unused deps: @dnd-kit/*, recharts, sonner, zod, next-themes, lucide-react
+  Remove use-sync-external-store shim plugin and src/shims/
+
 0.11.0
 
   Add advanced analytics tracking
