@@ -1,6 +1,6 @@
 import Header from '@stevederico/skateboard-ui/Header';
 import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 import { useState, useEffect } from 'react';
 import ProductDialog from './ProductDialog';
 import RecentScansDialog from './RecentScansDialog';
