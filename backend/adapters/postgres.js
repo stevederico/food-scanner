@@ -335,11 +335,38 @@ export class PostgreSQLProvider {
   async insertAuth(pool, authData) {
     const { email, password, userID } = authData;
     const sql = 'INSERT INTO auths (email, password, "userID") VALUES ($1, $2, $3)';
-    
+
     const client = await pool.connect();
     try {
       await client.query(sql, [email, password, userID]);
       return { insertedId: email };
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Update an authentication record's password hash
+   *
+   * Uses parameterized query.
+   *
+   * @async
+   * @param {pg.Pool} pool - PostgreSQL connection pool
+   * @param {Object} query - Query object
+   * @param {string} query.email - User email (primary key)
+   * @param {Object} update - Fields to update
+   * @param {string} update.password - New password hash
+   * @returns {Promise<{modifiedCount: number}>} Number of rows modified
+   */
+  async updateAuth(pool, query, update) {
+    const { email } = query;
+    const { password } = update;
+    const sql = "UPDATE auths SET password = $1 WHERE email = $2";
+
+    const client = await pool.connect();
+    try {
+      const result = await client.query(sql, [password, email]);
+      return { modifiedCount: result.rowCount };
     } finally {
       client.release();
     }

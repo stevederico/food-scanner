@@ -305,6 +305,24 @@ export class SQLiteProvider {
   }
 
   /**
+   * Update an authentication record's password hash
+   *
+   * @async
+   * @param {Database} db - SQLite database instance
+   * @param {Object} query - Query object
+   * @param {string} query.email - User email (primary key)
+   * @param {Object} update - Fields to update
+   * @param {string} update.password - New password hash
+   * @returns {Promise<{modifiedCount: number}>} Number of rows modified
+   */
+  async updateAuth(db, query, update) {
+    const { email } = query;
+    const { password } = update;
+    const result = db.prepare("UPDATE Auths SET password = ? WHERE email = ?").run(password, email);
+    return { modifiedCount: result.changes };
+  }
+
+  /**
    * Execute custom SQL query with unified response format
    *
    * Handles both SELECT (uses .all()) and modification queries (uses .run()).
