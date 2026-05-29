@@ -190,6 +190,27 @@ class DatabaseManager {
   }
 
   /**
+   * Update an authentication record's password hash
+   *
+   * Used to lazily migrate legacy bcrypt hashes to scrypt on successful login.
+   *
+   * @async
+   * @param {string} dbType - Database type
+   * @param {string} dbName - Database name
+   * @param {string} connectionString - Connection string or file path
+   * @param {Object} query - Query object
+   * @param {string} query.email - User email
+   * @param {Object} update - Fields to update
+   * @param {string} update.password - New password hash
+   * @returns {Promise<{modifiedCount: number}>} Number of records modified
+   * @throws {Error} If database operation fails
+   */
+  async updateAuth(dbType, dbName, connectionString, query, update) {
+    const { provider, database } = await this.getDatabase(dbType, dbName, connectionString);
+    return await provider.updateAuth(database, query, update);
+  }
+
+  /**
    * Execute custom query operation
    *
    * Generic query executor for provider-specific operations.
