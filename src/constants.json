@@ -18,17 +18,17 @@
         "title": "Smart Food Scanning",
         "items": [
             {
-                "icon": "\ud83d\udd0d",
+                "icon": "scan-barcode",
                 "title": "Scan Barcodes",
                 "description": "Instantly scan any product barcode to see ingredients and nutritional info"
             },
             {
-                "icon": "\u26a0\ufe0f",
+                "icon": "flask-conical",
                 "title": "Ingredient Analysis",
                 "description": "Automatically identify harmful ingredients and get health recommendations"
             },
             {
-                "icon": "\ud83d\udcca",
+                "icon": "history",
                 "title": "Track History",
                 "description": "Keep track of all your scanned products and make better food choices"
             }
