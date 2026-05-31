@@ -25,7 +25,6 @@ import CommandMenu from './components/CommandMenu.jsx';
 import HomeView from './components/HomeView.jsx';
 import ScanView from './components/ScanView.jsx';
 import DocsView from './components/DocsView.jsx';
-import LandingSpecSheet from './components/LandingSpecSheet.jsx';
 
 /**
  * App layout with global command menu overlay.
@@ -54,7 +53,6 @@ createSkateboardApp({
   constants,
   appRoutes,
   defaultRoute: 'home',
-  landingPage: <LandingSpecSheet />,
   wrapper: AnalyticsProvider,
   overrides: { layout: AppLayout }
 });
