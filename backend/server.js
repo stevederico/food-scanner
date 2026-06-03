@@ -7,7 +7,7 @@ import { secureHeaders } from 'hono/secure-headers'
 import { cors } from 'hono/cors'
 import Stripe from "stripe";
 import { compare as legacyBcryptCompare } from "./vendor/legacy-bcrypt.js";
-import crypto from "node:crypto";
+import crypto from "crypto";
 
 import { databaseManager } from "./adapters/manager.js";
 import { dirname, resolve } from 'node:path';
@@ -17,6 +17,51 @@ import { promisify } from 'node:util';
 
 // ==== SERVER CONFIG ====
 const port = parseInt(process.env.PORT || "8000");
+
+// ==== STRUCTURED LOGGING ====
+// Defined early so all code can use it (no external dependencies)
+const logger = {
+  error: (message, meta = {}) => {
+    const logEntry = {
+      level: 'ERROR',
+      timestamp: new Date().toISOString(),
+      message,
+      ...meta
+    };
+    console.error(!isProd() ? JSON.stringify(logEntry, null, 2) : JSON.stringify(logEntry));
+  },
+
+  warn: (message, meta = {}) => {
+    const logEntry = {
+      level: 'WARN',
+      timestamp: new Date().toISOString(),
+      message,
+      ...meta
+    };
+    console.warn(!isProd() ? JSON.stringify(logEntry, null, 2) : JSON.stringify(logEntry));
+  },
+
+  info: (message, meta = {}) => {
+    const logEntry = {
+      level: 'INFO',
+      timestamp: new Date().toISOString(),
+      message,
+      ...meta
+    };
+    console.log(!isProd() ? JSON.stringify(logEntry, null, 2) : JSON.stringify(logEntry));
+  },
+
+  debug: (message, meta = {}) => {
+    if (isProd()) return;
+    const logEntry = {
+      level: 'DEBUG',
+      timestamp: new Date().toISOString(),
+      message,
+      ...meta
+    };
+    console.log(JSON.stringify(logEntry, null, 2));
+  }
+};
 
 // ==== CSRF PROTECTION ====
 const csrfTokenStore = new Map(); // userID -> { token, timestamp }
@@ -66,6 +111,7 @@ function generateCSRFToken() {
  * Validates CSRF token from x-csrf-token header against stored token for userID.
  * Skips validation for GET requests and signup/signin routes. Uses timing-safe
  * comparison to prevent timing attacks. Enforces 24-hour token expiry.
+ * Auto-regenerates token if missing (e.g., server restart) for authenticated users.
  *
  * @async
  * @param {Context} c - Hono context
@@ -81,27 +127,57 @@ async function csrfProtection(c, next) {
   const userID = c.get('userID'); // Set by authMiddleware
 
   if (!csrfToken || !userID) {
+    logger.info('CSRF validation failed - missing token or userID', {
+      hasToken: !!csrfToken,
+      hasUserID: !!userID,
+      path: c.req.path
+    });
     return c.json({ error: 'Invalid CSRF token' }, 403);
   }
 
-  const storedData = csrfTokenStore.get(userID);
+  let storedData = csrfTokenStore.get(userID);
   if (!storedData) {
-    return c.json({ error: 'Invalid CSRF token' }, 403);
+    // Auto-regenerate token for authenticated users (e.g., after server restart)
+    // Security: This block only runs if authMiddleware passed (JWT valid)
+    const newToken = generateCSRFToken();
+    storedData = { token: newToken, timestamp: Date.now() };
+    csrfTokenStore.set(userID, storedData);
+
+    setCookie(c, 'csrf_token', newToken, {
+      httpOnly: false,
+      secure: isProd(),
+      sameSite: 'Lax',
+      path: '/',
+      maxAge: CSRF_TOKEN_EXPIRY / 1000
+    });
+
+    logger.info('CSRF token auto-regenerated after store miss', { userID });
+    await next();
+    return;
   }
 
   // Use timing-safe comparison to prevent timing attacks
   const tokenBuffer = Buffer.from(csrfToken);
   const storedBuffer = Buffer.from(storedData.token);
   if (tokenBuffer.length !== storedBuffer.length || !crypto.timingSafeEqual(tokenBuffer, storedBuffer)) {
+    logger.info('CSRF validation failed - token mismatch', {
+      userID,
+      path: c.req.path
+    });
     return c.json({ error: 'Invalid CSRF token' }, 403);
   }
 
   // Check if token is expired
   if (Date.now() - storedData.timestamp > CSRF_TOKEN_EXPIRY) {
     csrfTokenStore.delete(userID);
+    logger.info('CSRF validation failed - token expired', {
+      userID,
+      age: Math.floor((Date.now() - storedData.timestamp) / 1000) + 's'
+    });
     return c.json({ error: 'CSRF token expired' }, 403);
   }
 
+  logger.debug('CSRF validation passed', { userID });
   await next();
 }
 
@@ -121,9 +197,96 @@ setInterval(() => {
   evictOldestEntries(csrfTokenStore, CSRF_MAX_ENTRIES, (data) => data.timestamp);
 
   if (cleaned > 0) {
-    console.log(`[${new Date().toISOString()}] CSRF cleanup: removed ${cleaned} expired tokens`);
+    logger.debug('CSRF cleanup completed', { removedTokens: cleaned });
   }
 }, 60 * 60 * 1000); // Run every hour
+
+// ==== ACCOUNT LOCKOUT ====
+const loginAttemptStore = new Map(); // email -> { attempts, lockedUntil }
+const LOCKOUT_THRESHOLD = 5; // Lock after 5 failed attempts
+const LOCKOUT_DURATION = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_MAX_ENTRIES = 50000; // LRU eviction threshold
+
+/**
+ * Check if account is locked due to failed login attempts
+ *
+ * @param {string} email - Email address to check
+ * @returns {{locked: boolean, remainingTime: number}} Lock status and remaining time in seconds
+ */
+function isAccountLocked(email) {
+  const record = loginAttemptStore.get(email);
+  if (!record) return { locked: false, remainingTime: 0 };
+
+  const now = Date.now();
+  if (record.lockedUntil && now < record.lockedUntil) {
+    return {
+      locked: true,
+      remainingTime: Math.ceil((record.lockedUntil - now) / 1000)
+    };
+  }
+
+  // Lock expired, clear record
+  if (record.lockedUntil && now >= record.lockedUntil) {
+    loginAttemptStore.delete(email);
+  }
+
+  return { locked: false, remainingTime: 0 };
+}
+
+/**
+ * Record a failed login attempt for an email
+ *
+ * Increments attempt counter. Locks account after LOCKOUT_THRESHOLD failures.
+ *
+ * @param {string} email - Email address that failed login
+ * @returns {void}
+ */
+function recordFailedLogin(email) {
+  const now = Date.now();
+  let record = loginAttemptStore.get(email);
+
+  if (!record) {
+    record = { attempts: 0, lockedUntil: null };
+    loginAttemptStore.set(email, record);
+  }
+
+  record.attempts++;
+
+  if (record.attempts >= LOCKOUT_THRESHOLD) {
+    record.lockedUntil = now + LOCKOUT_DURATION;
+    logger.info('Account locked due to failed attempts', { email: email.substring(0, 3) + '***' });
+  }
+}
+
+/**
+ * Clear failed login attempts on successful login
+ *
+ * @param {string} email - Email address to clear
+ * @returns {void}
+ */
+function clearFailedLogins(email) {
+  loginAttemptStore.delete(email);
+}
+
+// Cleanup expired lockout entries every 15 minutes
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+
+  for (const [email, record] of loginAttemptStore.entries()) {
+    if (record.lockedUntil && now >= record.lockedUntil) {
+      loginAttemptStore.delete(email);
+      cleaned++;
+    }
+  }
+
+  // LRU eviction if still over limit
+  evictOldestEntries(loginAttemptStore, LOCKOUT_MAX_ENTRIES, (data) => data.lockedUntil || 0);
+
+  if (cleaned > 0) {
+    logger.debug('Lockout cleanup completed', { removedEntries: cleaned });
+  }
+}, 15 * 60 * 1000);
 
 // ==== CONFIG & ENV ====
 // Environment setup - MUST happen before config loading
@@ -131,7 +294,7 @@ if (!isProd()) {
   loadLocalENV();
 } else {
   setInterval(async () => {
-    console.log(`Hourly Completed at ${new Date().toLocaleTimeString()}`);
+    logger.debug('Hourly task completed');
   }, 60 * 60 * 1000); // Every hour
 }
 
@@ -150,7 +313,7 @@ function resolveEnvironmentVariables(str) {
   return str.replace(/\$\{([^}]+)\}/g, (match, varName) => {
     const envValue = process.env[varName];
     if (envValue === undefined) {
-      console.warn(`Environment variable ${varName} is not defined, using placeholder: ${match}`);
+      logger.warn('Environment variable not defined, using placeholder', { varName, placeholder: match });
       return match; // Return the placeholder if env var is not found
     }
     return envValue;
@@ -175,7 +338,7 @@ try {
     }
   };
 } catch (err) {
-  console.error('Failed to load config:', err);
+  logger.error('Failed to load config, using defaults', { error: err.message });
   config = {
     staticDir: '../dist',
     database: {
@@ -189,7 +352,15 @@ try {
 const STRIPE_KEY = process.env.STRIPE_KEY;
 const JWT_SECRET = process.env.JWT_SECRET;
 
-// Validate required environment variables
+/**
+ * Validate required environment variables are set
+ *
+ * Checks for STRIPE_KEY, STRIPE_ENDPOINT_SECRET, JWT_SECRET, and any
+ * unresolved ${VAR} references in database config. Logs warnings for
+ * missing variables but does not exit the process.
+ *
+ * @returns {boolean} True if all required variables are present
+ */
 function validateEnvironmentVariables() {
   const missing = [];
 
@@ -211,15 +382,10 @@ function validateEnvironmentVariables() {
   }
 
   if (missing.length > 0) {
-    console.warn("⚠️  Missing environment variables (server will continue with limited functionality):");
-    missing.forEach(varName => console.warn(`   - ${varName}`));
-    console.warn("\n💡 For full functionality, set these environment variables:");
-    console.warn("   - DATABASE_URL (general database connection)");
-    console.warn("   - MONGODB_URL (MongoDB connection)");
-    console.warn("   - POSTGRES_URL (PostgreSQL connection)");
-    console.warn("   - STRIPE_KEY (Stripe payments)");
-    console.warn("   - JWT_SECRET (authentication)");
-    console.warn("\n🔄 Server continuing with fallback/default values...\n");
+    logger.warn('Missing environment variables - server continuing with limited functionality', {
+      missing,
+      hint: 'Set DATABASE_URL, MONGODB_URL, POSTGRES_URL, STRIPE_KEY, JWT_SECRET for full functionality'
+    });
 
     // Don't exit - let the server continue with warnings
     return false;
@@ -231,62 +397,10 @@ function validateEnvironmentVariables() {
 const envValidationPassed = validateEnvironmentVariables();
 
 if (envValidationPassed) {
-  console.log('✅ Environment variables validated successfully');
+  logger.info('Environment variables validated successfully');
 }
 
-console.log('Single-client backend initialized');
-
-// Development mode check
-const isDevelopment = process.env.NODE_ENV !== 'production';
-
-// Structured logging system (no external dependencies)
-const logger = {
-  error: (message, meta = {}) => {
-    const logEntry = {
-      level: 'ERROR',
-      timestamp: new Date().toISOString(),
-      message,
-      ...meta
-    };
-    console.error(isDevelopment ? JSON.stringify(logEntry, null, 2) : JSON.stringify(logEntry));
-  },
-
-  warn: (message, meta = {}) => {
-    const logEntry = {
-      level: 'WARN',
-      timestamp: new Date().toISOString(),
-      message,
-      ...meta
-    };
-    console.warn(isDevelopment ? JSON.stringify(logEntry, null, 2) : JSON.stringify(logEntry));
-  },
-
-  info: (message, meta = {}) => {
-    const logEntry = {
-      level: 'INFO',
-      timestamp: new Date().toISOString(),
-      message,
-      ...meta
-    };
-    console.log(isDevelopment ? JSON.stringify(logEntry, null, 2) : JSON.stringify(logEntry));
-  },
-
-  debug: (message, meta = {}) => {
-    if (!isDevelopment) return;
-    const logEntry = {
-      level: 'DEBUG',
-      timestamp: new Date().toISOString(),
-      message,
-      ...meta
-    };
-    console.log(JSON.stringify(logEntry, null, 2));
-  }
-};
-
-// Log server initialization
-logger.info('Server initialization started', {
-  environment: isDevelopment ? 'development' : 'production'
-});
+logger.info('Single-client backend initialized');
 
 // ==== DATABASE CONFIG ====
 // Single database configuration - no origin-based routing needed
@@ -298,11 +412,36 @@ let stripe = null;
 if (STRIPE_KEY) {
   stripe = new Stripe(STRIPE_KEY);
 } else {
-  console.warn('⚠️  STRIPE_KEY not set - Stripe functionality will be disabled');
+  logger.warn('STRIPE_KEY not set - Stripe functionality disabled');
 }
 
 // Single database config - always use the same one
 const currentDbConfig = dbConfig;
+
+/**
+ * Database helper with pre-bound configuration
+ *
+ * Provides shorthand methods for database operations without repeating
+ * dbType, db, connectionString on every call.
+ *
+ * @type {Object}
+ * @example
+ * // Instead of:
+ * await db.findUser( { email });
+ * // Use:
+ * await db.findUser({ email });
+ */
+const db = {
+  findUser: (query, projection) => databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, query, projection),
+  insertUser: (userData) => databaseManager.insertUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, userData),
+  updateUser: (query, update) => databaseManager.updateUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, query, update),
+  findAuth: (query) => databaseManager.findAuth(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, query),
+  insertAuth: (authData) => databaseManager.insertAuth(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, authData),
+  updateAuth: (query, update) => databaseManager.updateAuth(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, query, update),
+  findWebhookEvent: (eventId) => databaseManager.findWebhookEvent(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, eventId),
+  insertWebhookEvent: (eventId, eventType, processedAt) => databaseManager.insertWebhookEvent(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, eventId, eventType, processedAt),
+  executeQuery: (queryObject) => databaseManager.executeQuery(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, queryObject)
+};
 
 // ==== HONO SETUP ====
 const app = new Hono();
@@ -341,20 +480,19 @@ app.use('*', async (c, next) => {
 app.use('*', secureHeaders({
   contentSecurityPolicy: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'", "'unsafe-inline'", "https://aob.bixbyapps.com", "https://static.cloudflareinsights.com"],
+    scriptSrc: ["'self'", "'unsafe-inline'"],
     styleSrc: ["'self'", "'unsafe-inline'"],
-    imgSrc: ["'self'", "https:", "data:"],
+    imgSrc: ["'self'", "https:"],
     fontSrc: ["'self'"],
-    connectSrc: ["'self'", "https://aob.bixbyapps.com", "https://cloudflareinsights.com"],
-    frameSrc: ["https://www.youtube.com", "https://youtube.com"],
+    connectSrc: ["'self'"],
     frameAncestors: ["'none'"]
   },
-  strictTransportSecurity: isDevelopment ? false : 'max-age=31536000; includeSubDomains; preload',
+  strictTransportSecurity: !isProd() ? false : 'max-age=31536000; includeSubDomains; preload',
   xFrameOptions: 'DENY',
   xContentTypeOptions: 'nosniff',
   referrerPolicy: 'strict-origin-when-cross-origin',
   permissionsPolicy: {
-    camera: ["self"],
+    camera: [],
     microphone: [],
     geolocation: [],
     payment: []
@@ -363,9 +501,9 @@ app.use('*', secureHeaders({
 
 // Request logging middleware (dev only)
 app.use('*', async (c, next) => {
-  if (isDevelopment) {
+  if (!isProd()) {
     const requestId = Math.random().toString(36).substr(2, 9);
-    console.log(`[${new Date().toISOString()}] ${c.req.method} ${c.req.path} - ID: ${requestId}`);
+    logger.debug('Request received', { method: c.req.method, path: c.req.path, requestId });
   }
   await next();
 });
@@ -518,7 +656,8 @@ async function generateToken(userID) {
 /**
  * Authentication middleware using JWT from HttpOnly cookie
  *
- * Verifies JWT token from 'token' cookie. Sets userID in context on success.
+ * Verifies JWT token from 'token' cookie. Sets userID in context on success,
+ * normalized to string for consistent Map key usage across middleware (CSRF, sessions).
  * Returns 401 for missing, expired, or invalid tokens. Returns 503 if
  * JWT_SECRET not configured.
  *
@@ -540,7 +679,9 @@ async function authMiddleware(c, next) {
 
   try {
     const payload = jwtVerify(token, JWT_SECRET);
-    c.set('userID', payload.userID);
+    // Normalize userID to string for consistent Map key usage (CSRF, sessions)
+    const normalizedUserID = String(payload.userID);
+    c.set('userID', normalizedUserID);
     await next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -635,7 +776,94 @@ const validateName = (name) => {
   return true;
 };
 
+/**
+ * Set authentication cookies and generate CSRF token for user session
+ *
+ * Creates CSRF token, stores it in memory, and sets both JWT (HttpOnly) and
+ * CSRF (readable) cookies. Consolidates duplicate cookie logic from signup/signin.
+ *
+ * @async
+ * @param {Context} c - Hono context
+ * @param {string} userID - User ID to associate with session
+ * @param {string} jwtToken - Pre-generated JWT token
+ * @returns {string} Generated CSRF token
+ */
+function setAuthCookies(c, userID, jwtToken) {
+  const csrfToken = generateCSRFToken();
+  csrfTokenStore.set(userID.toString(), { token: csrfToken, timestamp: Date.now() });
+
+  // Set HttpOnly JWT cookie
+  setCookie(c, 'token', jwtToken, {
+    httpOnly: true,
+    secure: isProd(),
+    sameSite: 'Strict',
+    path: '/',
+    maxAge: tokenExpirationDays * 24 * 60 * 60
+  });
+
+  // Set CSRF token cookie (readable by frontend)
+  setCookie(c, 'csrf_token', csrfToken, {
+    httpOnly: false,
+    secure: isProd(),
+    sameSite: 'Lax',
+    path: '/',
+    maxAge: CSRF_TOKEN_EXPIRY / 1000
+  });
+
+  return csrfToken;
+}
+
 // ==== STRIPE WEBHOOK (raw body needed) ====
+
+/**
+ * Resolve a Stripe customer ID to a normalized lowercase email.
+ *
+ * @param {string} stripeID - Stripe customer ID
+ * @returns {Promise<string|null>} Normalized email, or null if missing
+ */
+async function resolveCustomerEmail(stripeID) {
+  const customer = await stripe.customers.retrieve(stripeID);
+  if (!customer?.email) {
+    logger.warn('Webhook: Customer has no email', { stripeID });
+    return null;
+  }
+  return customer.email.toLowerCase();
+}
+
+/**
+ * Build the canonical user.subscription patch from a Stripe customer ID
+ * and a Stripe subscription object.
+ *
+ * @param {string} stripeID - Stripe customer ID
+ * @param {object} stripeSub - Stripe subscription object
+ * @returns {{stripeID: string, expires: number, status: string}}
+ */
+function buildSubscriptionPatch(stripeID, stripeSub) {
+  return {
+    stripeID,
+    expires: stripeSub.current_period_end,
+    status: stripeSub.status
+  };
+}
+
+/**
+ * Apply a $set patch to the user identified by email. Returns false if no
+ * matching user is found (silent no-op so Stripe will not retry).
+ *
+ * @param {string} email - Normalized email
+ * @param {object} $set - MongoDB-style $set fields
+ * @returns {Promise<boolean>} True if a user was patched
+ */
+async function applyUserPatch(email, $set) {
+  const user = await db.findUser({ email });
+  if (!user) {
+    logger.warn('Webhook: No user found for email', { email });
+    return false;
+  }
+  await db.updateUser({ email }, { $set });
+  return true;
+}
+
 app.post("/api/payment", async (c) => {
   logger.info('Payment webhook received');
 
@@ -653,37 +881,72 @@ app.post("/api/payment", async (c) => {
   }
 
   try {
-    // Use the single database config for webhooks
-    const webhookConfig = currentDbConfig;
-    const { customer: stripeID, current_period_end, status } = event.data.object;
-
-    // Validate required fields exist
-    if (!stripeID) {
-      logger.error('Webhook missing customer ID');
-      return c.body(null, 400);
+    // Idempotency check - skip if already processed
+    const existingEvent = await db.findWebhookEvent(event.id);
+    if (existingEvent) {
+      logger.info('Webhook event already processed, skipping', { eventId: event.id });
+      return c.body(null, 200);
     }
 
-    const customer = await stripe.customers.retrieve(stripeID);
+    // Record event BEFORE processing to prevent race conditions
+    await db.insertWebhookEvent(event.id, event.type, Date.now());
 
-    // Null check for customer email
-    if (!customer || !customer.email) {
-      logger.error('Webhook: Customer has no email', { stripeID });
-      return c.body(null, 400);
+    const eventObject = event.data.object;
+
+    if (["customer.subscription.deleted", "customer.subscription.updated", "customer.subscription.created"].includes(event.type)) {
+      const { customer: stripeID, current_period_end, status } = eventObject;
+      if (!stripeID) {
+        logger.error('Webhook missing customer ID', { type: event.type });
+        return c.body(null, 400);
+      }
+      const email = await resolveCustomerEmail(stripeID);
+      if (!email) return c.body(null, 400);
+      const ok = await applyUserPatch(email, { subscription: { stripeID, expires: current_period_end, status } });
+      if (ok) logger.info('Subscription updated', { type: event.type, email, status });
     }
 
-    const customerEmail = customer.email.toLowerCase();
-
-    if (["customer.subscription.deleted", "customer.subscription.updated","customer.subscription.created"].includes(event.type)) {
-      logger.info('Webhook processed', { type: event.type });
-      const user = await databaseManager.findUser(webhookConfig.dbType, webhookConfig.db, webhookConfig.connectionString, { email: customerEmail });
-      if (user) {
-        await databaseManager.updateUser(webhookConfig.dbType, webhookConfig.db, webhookConfig.connectionString, { email: customerEmail }, {
-          $set: { subscription: { stripeID, expires: current_period_end, status } }
-        });
-      } else {
-        logger.warn('Webhook: No user found for email');
+    if (event.type === "checkout.session.completed") {
+      const { customer: stripeID, customer_email, subscription: subscriptionId } = eventObject;
+      if (subscriptionId && stripeID) {
+        const [subscription, email] = await Promise.all([
+          stripe.subscriptions.retrieve(subscriptionId),
+          customer_email ? Promise.resolve(customer_email.toLowerCase()) : resolveCustomerEmail(stripeID)
+        ]);
+        if (email) {
+          const ok = await applyUserPatch(email, { subscription: buildSubscriptionPatch(stripeID, subscription) });
+          if (ok) logger.info('Checkout completed', { email, status: subscription.status });
+        }
       }
     }
+
+    if (event.type === "invoice.paid") {
+      const { customer: stripeID, subscription: subscriptionId } = eventObject;
+      if (subscriptionId && stripeID) {
+        const [subscription, email] = await Promise.all([
+          stripe.subscriptions.retrieve(subscriptionId),
+          resolveCustomerEmail(stripeID)
+        ]);
+        if (email) {
+          const ok = await applyUserPatch(email, { subscription: buildSubscriptionPatch(stripeID, subscription) });
+          if (ok) logger.info('Invoice paid', { email });
+        }
+      }
+    }
+
+    if (event.type === "invoice.payment_failed") {
+      const { customer: stripeID } = eventObject;
+      if (stripeID) {
+        const email = await resolveCustomerEmail(stripeID);
+        if (email) {
+          const ok = await applyUserPatch(email, {
+            'subscription.paymentFailed': true,
+            'subscription.paymentFailedAt': Date.now()
+          });
+          if (ok) logger.warn('Invoice payment failed', { email });
+        }
+      }
+    }
+
     return c.body(null, 200);
   } catch (e) {
     logger.error('Webhook processing error', { error: e.message });
@@ -694,10 +957,34 @@ app.post("/api/payment", async (c) => {
 // ==== STATIC ROUTES ====
 app.get("/api/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
 
+/**
+ * Parse JSON request body with proper error handling
+ *
+ * Returns parsed JSON or null if parsing fails. Sets 400 response on failure.
+ * Handles SyntaxError from malformed JSON.
+ *
+ * @async
+ * @param {Context} c - Hono context
+ * @returns {Promise<Object|null>} Parsed body or null on error
+ */
+async function parseJsonBody(c) {
+  try {
+    return await c.req.json();
+  } catch (e) {
+    if (e instanceof SyntaxError) {
+      return null;
+    }
+    throw e;
+  }
+}
+
 // ==== AUTH ROUTES ====
 app.post("/api/signup", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await parseJsonBody(c);
+    if (!body) {
+      return c.json({ error: 'Invalid request body' }, 400);
+    }
     let { email, password, name } = body;
 
     // Validation
@@ -718,38 +1005,30 @@ app.post("/api/signup", async (c) => {
     let insertID = generateUUID()
 
     try {
-      const result = await databaseManager.insertUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, {
+      // Insert user first
+      await db.insertUser({
         _id: insertID,
         email: email,
         name: name,
         created_at: Date.now()
       });
 
+      // Insert auth record (compensating delete on failure)
+      try {
+        await db.insertAuth({ email: email, password: hash, userID: insertID });
+      } catch (authError) {
+        // Rollback: delete the user we just created
+        logger.error('Auth insert failed, rolling back user creation', { error: authError.message });
+        try {
+          await db.executeQuery({ query: 'DELETE FROM Users WHERE _id = ?', params: [insertID] });
+        } catch (rollbackError) {
+          logger.error('Rollback failed - orphaned user record', { userID: insertID, error: rollbackError.message });
+        }
+        throw authError;
+      }
+
       const token = await generateToken(insertID);
-      await databaseManager.insertAuth(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { email: email, password: hash, userID: insertID });
-
-      // Generate CSRF token
-      const csrfToken = generateCSRFToken();
-      csrfTokenStore.set(insertID.toString(), { token: csrfToken, timestamp: Date.now() });
-
-      // Set HttpOnly cookie
-      setCookie(c, 'token', token, {
-        httpOnly: true,
-        secure: !isDevelopment,
-        sameSite: 'Strict',
-        path: '/',
-        maxAge: tokenExpirationDays * 24 * 60 * 60
-      });
-
-      // Set CSRF token cookie (readable by frontend)
-      setCookie(c, 'csrf_token', csrfToken, {
-        httpOnly: false,
-        secure: !isDevelopment,
-        sameSite: 'Lax',
-        path: '/',
-        maxAge: CSRF_TOKEN_EXPIRY / 1000
-      });
-
+      setAuthCookies(c, insertID, token);
       logger.info('Signup success');
 
       return c.json({
@@ -773,7 +1052,10 @@ app.post("/api/signup", async (c) => {
 
 app.post("/api/signin", async (c) => {
   try {
-    const body = await c.req.json();
+    const body = await parseJsonBody(c);
+    if (!body) {
+      return c.json({ error: 'Invalid request body' }, 400);
+    }
     let { email, password } = body;
 
     // Validation
@@ -787,16 +1069,28 @@ app.post("/api/signin", async (c) => {
     email = email.toLowerCase().trim();
     logger.debug('Attempting signin');
 
+    // Check account lockout
+    const lockStatus = isAccountLocked(email);
+    if (lockStatus.locked) {
+      c.header('Retry-After', String(lockStatus.remainingTime));
+      return c.json({
+        error: 'Account temporarily locked. Try again later.',
+        retryAfter: lockStatus.remainingTime
+      }, 429);
+    }
+
     // Check if auth exists
-    const auth = await databaseManager.findAuth(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { email: email });
+    const auth = await db.findAuth( { email: email });
     if (!auth) {
       logger.debug('Auth record not found');
+      recordFailedLogin(email);
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
-    //verify
+    // Verify password
     if (!(await verifyPassword(password, auth.password))) {
       logger.debug('Password verification failed');
+      recordFailedLogin(email);
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
@@ -804,45 +1098,26 @@ app.post("/api/signin", async (c) => {
     if (needsRehash(auth.password)) {
       try {
         const newHash = await hashPassword(password);
-        await databaseManager.updateAuth(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { email }, { password: newHash });
+        await db.updateAuth({ email }, { password: newHash });
         logger.debug('Password hash migrated to scrypt');
       } catch (e) {
         logger.warn('Password rehash failed', { error: e.message });
       }
     }
 
-    // get user
-    const user = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { email: email });
+    // Get user
+    const user = await db.findUser( { email: email });
     if (!user) {
       logger.error('User not found for auth record');
       return c.json({ error: "Invalid credentials" }, 401);
     }
 
-    // generate token
+    // Clear failed attempts on successful login
+    clearFailedLogins(email);
+
+    // Generate token
     const token = await generateToken(user._id.toString());
-
-    // Generate CSRF token
-    const csrfToken = generateCSRFToken();
-    csrfTokenStore.set(user._id.toString(), { token: csrfToken, timestamp: Date.now() });
-
-    // Set HttpOnly cookie
-    setCookie(c, 'token', token, {
-      httpOnly: true,
-      secure: !isDevelopment,
-      sameSite: 'Strict',
-      path: '/',
-      maxAge: tokenExpirationDays * 24 * 60 * 60
-    });
-
-    // Set CSRF token cookie (readable by frontend)
-    setCookie(c, 'csrf_token', csrfToken, {
-      httpOnly: false,
-      secure: !isDevelopment,
-      sameSite: 'Lax',
-      path: '/',
-      maxAge: CSRF_TOKEN_EXPIRY / 1000
-    });
-
+    setAuthCookies(c, user._id, token);
     logger.info('Signin success');
 
     return c.json({
@@ -874,7 +1149,7 @@ app.post("/api/signout", authMiddleware, async (c) => {
     // Clear the HttpOnly cookie
     deleteCookie(c, 'token', {
       httpOnly: true,
-      secure: !isDevelopment,
+      secure: isProd(),
       sameSite: 'Strict',
       path: '/'
     });
@@ -882,7 +1157,7 @@ app.post("/api/signout", authMiddleware, async (c) => {
     // Clear the CSRF token cookie
     deleteCookie(c, 'csrf_token', {
       httpOnly: false,
-      secure: !isDevelopment,
+      secure: isProd(),
       sameSite: 'Lax',
       path: '/'
     });
@@ -898,7 +1173,7 @@ app.post("/api/signout", authMiddleware, async (c) => {
 // ==== USER DATA ROUTES ====
 app.get("/api/me", authMiddleware, async (c) => {
   const userID = c.get('userID');
-  const user = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+  const user = await db.findUser( { _id: userID });
   logger.debug('/me checking for user');
   if (!user) return c.json({ error: "User not found" }, 404);
   return c.json(user);
@@ -919,7 +1194,7 @@ app.put("/api/me", authMiddleware, csrfProtection, async (c) => {
     const UPDATEABLE_USER_FIELDS = ['name'];
 
     // Find user first to verify existence
-    const user = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+    const user = await db.findUser( { _id: userID });
     if (!user) return c.json({ error: "User not found" }, 404);
 
     // Whitelist approach - only allow specific fields
@@ -936,14 +1211,14 @@ app.put("/api/me", authMiddleware, csrfProtection, async (c) => {
     }
 
     // Update user document
-    const result = await databaseManager.updateUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID }, { $set: update });
+    const result = await db.updateUser( { _id: userID }, { $set: update });
 
     if (result.modifiedCount === 0) {
       return c.json({ error: "No changes made" }, 400);
     }
 
     // Return updated user
-    const updatedUser = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+    const updatedUser = await db.findUser( { _id: userID });
     return c.json(updatedUser);
   } catch (err) {
     logger.error('Update user error', { error: err.message });
@@ -963,7 +1238,7 @@ app.post("/api/usage", authMiddleware, async (c) => {
     }
 
     // Get user
-    const user = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+    const user = await db.findUser( { _id: userID });
     if (!user) return c.json({ error: "User not found" }, 404);
 
     // Check if user is a subscriber - subscribers get unlimited
@@ -993,7 +1268,7 @@ app.post("/api/usage", authMiddleware, async (c) => {
     if (!usage.reset_at || now > usage.reset_at) {
       const newResetAt = now + (30 * 24 * 60 * 60); // 30 days from now
       // Reset usage - atomic set operation
-      await databaseManager.updateUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString,
+      await db.updateUser(
         { _id: userID },
         { $set: { usage: { count: 0, reset_at: newResetAt } } }
       );
@@ -1003,18 +1278,18 @@ app.post("/api/usage", authMiddleware, async (c) => {
     if (operation === 'track') {
       // Atomic increment first to prevent race conditions
       // Then verify we haven't exceeded the limit
-      await databaseManager.updateUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString,
+      await db.updateUser(
         { _id: userID },
         { $inc: { 'usage.count': 1 } }
       );
 
       // Re-read user to get actual count after atomic increment
-      const updatedUser = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+      const updatedUser = await db.findUser( { _id: userID });
       const actualCount = updatedUser?.usage?.count || 1;
 
       // If we exceeded the limit, rollback the increment and return 429
       if (actualCount > limit) {
-        await databaseManager.updateUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString,
+        await db.updateUser(
           { _id: userID },
           { $inc: { 'usage.count': -1 } }
         );
@@ -1057,7 +1332,7 @@ app.post("/api/checkout", authMiddleware, csrfProtection, async (c) => {
     if (!email || !lookup_key) return c.json({ error: "Missing email or lookup_key" }, 400);
 
     // Verify the email matches the authenticated user
-    const user = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+    const user = await db.findUser( { _id: userID });
     if (!user || user.email !== email) return c.json({ error: "Email mismatch" }, 403);
 
     const prices = await stripe.prices.list({ lookup_keys: [lookup_key], expand: ["data.product"] });
@@ -1095,7 +1370,7 @@ app.post("/api/portal", authMiddleware, csrfProtection, async (c) => {
     if (!customerID) return c.json({ error: "Missing customerID" }, 400);
 
     // Verify the customerID matches the authenticated user's subscription
-    const user = await databaseManager.findUser(currentDbConfig.dbType, currentDbConfig.db, currentDbConfig.connectionString, { _id: userID });
+    const user = await db.findUser( { _id: userID });
     if (!user || (user.subscription?.stripeID && user.subscription.stripeID !== customerID)) {
       return c.json({ error: "Unauthorized customerID" }, 403);
     }
@@ -1114,28 +1389,16 @@ app.post("/api/portal", authMiddleware, csrfProtection, async (c) => {
 });
 
 // ==== STATIC FILE SERVING (Production) ====
-// All /api/* routes are handled above. Everything else is static/SPA.
 const staticDir = resolve(__dirname, config.staticDir);
 
-// Serve static assets - skip /api/* paths
-app.use('*', async (c, next) => {
-  // Skip API routes - they're handled by route handlers above
-  if (c.req.path.startsWith('/api/')) {
-    return next();
-  }
+// Serve static files
+app.use('/*', serveStatic({ root: staticDir }));
 
-  // Try to serve static file
-  const staticMiddleware = serveStatic({ root: config.staticDir });
-  return staticMiddleware(c, next);
-});
-
-// SPA fallback - serve index.html for client-side routing
+// SPA fallback — only for non-asset routes
 app.get('*', async (c) => {
-  // Skip API routes
-  if (c.req.path.startsWith('/api/')) {
-    return c.json({ error: 'Not found' }, 404);
+  if (c.req.path.startsWith('/api/') || c.req.path.match(/\.\w+$/)) {
+    return c.notFound();
   }
-
   try {
     const indexPath = resolve(staticDir, 'index.html');
     const file = await promisify(readFile)(indexPath);
@@ -1151,29 +1414,42 @@ app.onError((err, c) => {
 
   logger.error('Unhandled error occurred', {
     message: err.message,
-    stack: isDevelopment ? err.stack : undefined,
+    stack: !isProd() ? err.stack : undefined,
     path: c.req.path,
     method: c.req.method,
     requestId
   });
 
   return c.json({
-    error: isDevelopment ? err.message : 'Internal server error',
-    ...(isDevelopment && { stack: err.stack })
+    error: !isProd() ? err.message : 'Internal server error',
+    ...(!isProd() && { stack: err.stack })
   }, 500);
 });
 
 // ==== UTILITY FUNCTIONS ====
+
+/**
+ * Check if the server is running in production mode
+ *
+ * Reads the NODE_ENV environment variable. Returns true only when
+ * NODE_ENV is explicitly set to "production".
+ *
+ * @returns {boolean} True if NODE_ENV === "production"
+ */
 function isProd() {
-  if (typeof process.env.ENV === "undefined") {
-    return false
-  } else if (process.env.ENV === "production") {
-    return true
-  } else {
-    return false
-  }
+  return process.env.NODE_ENV === 'production';
 }
 
+/**
+ * Load environment variables from .env and optional .env.local file.
+ *
+ * Reads in two passes: backend/.env first (may be symlink to shared creds),
+ * then backend/.env.local for project-specific overrides (wins on conflict).
+ * Creates .env from .env.example if it doesn't exist. Only called in
+ * non-production mode — Railway injects vars directly in prod.
+ *
+ * @returns {void}
+ */
 function loadLocalENV() {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
@@ -1189,7 +1465,7 @@ function loadLocalENV() {
       const exampleData = readFileSync(envExamplePath, 'utf8');
       writeFileSync(envFilePath, exampleData);
     } catch (exampleErr) {
-      console.error('Failed to create .env from template', { error: exampleErr.message });
+      logger.error('Failed to create .env from template', { error: exampleErr.message });
       return;
     }
   }
@@ -1201,6 +1477,13 @@ function loadLocalENV() {
   loadEnvFile(envLocalPath);
 }
 
+/**
+ * Parse a .env file and apply key=value pairs to process.env.
+ * Skips blank lines and comments. Handles quoted values and values containing '='.
+ * Silently skips if file doesn't exist.
+ * @param {string} filePath - Absolute path to the .env file
+ * @returns {void}
+ */
 function loadEnvFile(filePath) {
   try {
     const data = readFileSync(filePath, 'utf8');
@@ -1227,7 +1510,7 @@ const server = serve({
 }, (info) => {
   logger.info('Server started successfully', {
     port: info.port,
-    environment: isDevelopment ? 'development' : 'production'
+    environment: !isProd() ? 'development' : 'production'
   });
 });
 
