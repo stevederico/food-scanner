@@ -1,6 +1,20 @@
 import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 
-export default function ApprovalBadge({ isApproved, showBadge = true }) {
+/** Props for the ApprovalBadge component. */
+interface ApprovalBadgeProps {
+  /** Whether the product passed the ingredient check */
+  isApproved: boolean;
+  /** Show the text badge below the icon (defaults to true) */
+  showBadge?: boolean;
+}
+
+/**
+ * Visual approval indicator for a scanned product.
+ *
+ * @component
+ * @returns Thumbs-up/down icon with optional Approved/Not Approved badge
+ */
+export default function ApprovalBadge({ isApproved, showBadge = true }: ApprovalBadgeProps) {
   if (isApproved) {
     return (
       <div className="flex flex-col items-center">

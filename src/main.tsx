@@ -18,13 +18,14 @@
  */
 import './assets/styles.css';
 import { createSkateboardApp } from '@stevederico/skateboard-ui/App';
+import type { AppRoute } from '@stevederico/skateboard-ui/App';
 import Layout from '@stevederico/skateboard-ui/Layout';
 import constants from './constants.json';
-import AnalyticsProvider from './components/AnalyticsProvider.jsx';
-import CommandMenu from './components/CommandMenu.jsx';
-import HomeView from './components/HomeView.jsx';
-import ScanView from './components/ScanView.jsx';
-import DocsView from './components/DocsView.jsx';
+import AnalyticsProvider from './components/AnalyticsProvider';
+import CommandMenu from './components/CommandMenu';
+import HomeView from './components/HomeView';
+import ScanView from './components/ScanView';
+import DocsView from './components/DocsView';
 
 /**
  * App layout with global command menu overlay.
@@ -32,7 +33,7 @@ import DocsView from './components/DocsView.jsx';
  * Wraps the default skateboard-ui Layout and injects CommandMenu
  * so the Cmd+K shortcut is available on all authenticated routes.
  *
- * @returns {JSX.Element} Layout with command menu
+ * @returns Layout with command menu
  */
 function AppLayout() {
   return (
@@ -43,7 +44,7 @@ function AppLayout() {
   );
 }
 
-const appRoutes = [
+const appRoutes: AppRoute[] = [
   { path: 'home', element: <HomeView /> },
   { path: 'scan', element: <ScanView /> },
   { path: 'docs', element: <DocsView /> }

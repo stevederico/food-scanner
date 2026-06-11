@@ -1,6 +1,12 @@
 import Header from '@stevederico/skateboard-ui/Header';
 import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 
+/**
+ * Static documentation view explaining how the app works.
+ *
+ * @component
+ * @returns Documentation page
+ */
 export default function DocsView() {
   return (
     <div className="flex flex-col min-h-screen bg-background">

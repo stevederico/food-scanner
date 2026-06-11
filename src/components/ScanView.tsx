@@ -2,19 +2,30 @@ import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
 import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
 import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
+import type { Product } from '../services/ProductService';
 import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
 import ApprovalBadge from './ApprovalBadge';
 
+/**
+ * Live barcode scanner view backed by the device camera and ZXing.
+ *
+ * @component
+ * @returns Camera scanner with a product result dialog
+ */
 export default function ScanView() {
-  const videoRef = useRef(null);
-  const readerRef = useRef(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [ingredientsList, setIngredientsList] = useState("");
-  const [product, setProduct] = useState({ product_name: "", image_url: "" });
+  const [product, setProduct] = useState<Product>({ product_name: "", image_url: "" });
   const [open, setOpen] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  async function handleProductScan(productID) {
+  /**
+   * Fetch and display a scanned product, or surface an error.
+   * @param productID - Decoded barcode value
+   */
+  async function handleProductScan(productID: string) {
     try {
       const product = await fetchProduct(productID);
       setProduct(product);
@@ -26,15 +37,16 @@ export default function ScanView() {
       setOpen(true);
     } catch (error) {
       console.error(error);
-      setErrorMessage(error.message || "Product not found. Try scanning again.");
+      setErrorMessage(error instanceof Error ? error.message : "Product not found. Try scanning again.");
       setOpen(true);
     }
   }
 
+  /** Begin continuous decoding from the rear camera into the video element. */
   const startScan = async () => {
     const video = videoRef.current;
     if (readerRef.current && video) {
-      const constraints = {
+      const constraints: MediaStreamConstraints = {
         video: {
           facingMode: "environment",
           width: { ideal: 1920 },
@@ -77,7 +89,7 @@ export default function ScanView() {
         if (!isOpen) reset();
       }}>
         <DialogContent
-          onOpenAutoFocus={(event) => event.preventDefault()}
+          initialFocus={false}
           showCloseButton={false}
           className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
         >

@@ -1,11 +1,30 @@
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
 import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
+import type { RecentScan } from '../services/ProductService';
 
-export default function RecentScansDialog({ isOpen, onClose, recentScans, onSelectProduct }) {
+/** Props for the RecentScansDialog component. */
+interface RecentScansDialogProps {
+  /** Whether the dialog is open */
+  isOpen: boolean;
+  /** Called when the dialog should close */
+  onClose: () => void;
+  /** List of recently scanned products */
+  recentScans: RecentScan[];
+  /** Called with the selected scan when a product is tapped */
+  onSelectProduct: (scan: RecentScan) => void;
+}
+
+/**
+ * Bottom-sheet dialog listing all recent scans in a grid.
+ *
+ * @component
+ * @returns Recent scans dialog
+ */
+export default function RecentScansDialog({ isOpen, onClose, recentScans, onSelectProduct }: RecentScansDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        onOpenAutoFocus={(event) => event.preventDefault()}
+        initialFocus={false}
         showCloseButton={false}
         className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
       >
@@ -14,10 +33,8 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
             <DynamicIcon name="Clock" className="w-5 h-5" />
             Recent Scans
           </DialogTitle>
-          <DialogClose asChild>
-            <button aria-label="Close dialog" className="p-2 rounded-full hover:bg-accent">
-              <DynamicIcon name="X" className="w-5 h-5" />
-            </button>
+          <DialogClose aria-label="Close dialog" className="p-2 rounded-full hover:bg-accent">
+            <DynamicIcon name="X" className="w-5 h-5" />
           </DialogClose>
         </div>
 

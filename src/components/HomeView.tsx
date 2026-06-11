@@ -1,20 +1,27 @@
 import Header from '@stevederico/skateboard-ui/Header';
 import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 import { Link } from 'react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
 import ProductDialog from './ProductDialog';
 import RecentScansDialog from './RecentScansDialog';
 import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
+import type { Product, RecentScan } from '../services/ProductService';
 import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
 
+/**
+ * Home view with product search, scan CTA, recent scans, and ingredient guide.
+ *
+ * @component
+ * @returns Home view
+ */
 export default function HomeView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [product, setProduct] = useState({ product_name: '', image_url: '' });
+  const [product, setProduct] = useState<Product>({ product_name: '', image_url: '' });
   const [ingredientsList, setIngredientsList] = useState('');
   const [isApproved, setIsApproved] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [recentScans, setRecentScans] = useState([]);
+  const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [isRecentScansOpen, setIsRecentScansOpen] = useState(false);
 
   useEffect(() => {
@@ -29,7 +36,11 @@ export default function HomeView() {
     }
   }, []);
 
-  async function handleSelectRecentScan(scan) {
+  /**
+   * Look up a previously scanned product and open its dialog.
+   * @param scan - The recent scan that was selected
+   */
+  async function handleSelectRecentScan(scan: RecentScan) {
     try {
       const product = await fetchProduct(scan.id);
       setProduct(product);
@@ -40,16 +51,20 @@ export default function HomeView() {
       setIsRecentScansOpen(false);
       setIsOpen(true);
     } catch (error) {
-      setErrorMessage(error.message);
+      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong');
       setIsRecentScansOpen(false);
       setIsOpen(true);
     }
   }
 
-  async function handleSearch(e) {
+  /**
+   * Search Open Food Facts by barcode or name and open the product dialog.
+   * @param e - Form submit event
+   */
+  async function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     try {
-      let product;
+      let product: Product;
       if (searchQuery.match(/^[0-9]+$/)) {
         product = await fetchProduct(searchQuery);
       } else {
@@ -74,7 +89,7 @@ export default function HomeView() {
       setRecentScans(newScans);
     } catch (error) {
       console.error(error);
-      setErrorMessage(error.message || "Error searching for product. Please try again.");
+      setErrorMessage(error instanceof Error ? error.message : "Error searching for product. Please try again.");
       setIsOpen(true);
     }
   }
@@ -92,7 +107,7 @@ export default function HomeView() {
               <input
                 type="text"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 placeholder="Search by product name or barcode..."
                 aria-label="Search products by name or barcode"
                 className="w-full p-4 pr-14 rounded-xl bg-accent border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
