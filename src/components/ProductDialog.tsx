@@ -1,11 +1,35 @@
+import type { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
 import ApprovalBadge from './ApprovalBadge';
+import type { Product } from '../services/ProductService';
 
-export default function ProductDialog({ isOpen, onClose, product, ingredientsList, isApproved, errorMessage }) {
+/** Props for the ProductDialog component. */
+interface ProductDialogProps {
+  /** Whether the dialog is open */
+  isOpen: boolean;
+  /** Called when the dialog should close */
+  onClose: () => void;
+  /** Product to display */
+  product: Product;
+  /** Rendered ingredient list (e.g. an IngredientRenderer element) */
+  ingredientsList: ReactNode;
+  /** Whether the product passed the approval check */
+  isApproved: boolean;
+  /** Error message to show instead of product details */
+  errorMessage?: string;
+}
+
+/**
+ * Bottom-sheet dialog showing a scanned/searched product or an error.
+ *
+ * @component
+ * @returns Product detail dialog
+ */
+export default function ProductDialog({ isOpen, onClose, product, ingredientsList, isApproved, errorMessage }: ProductDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        onOpenAutoFocus={(event) => event.preventDefault()}
+        initialFocus={false}
         showCloseButton={false}
         className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
       >
