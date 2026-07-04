@@ -29,7 +29,6 @@ export default function ProductDialog({ isOpen, onClose, product, ingredientsLis
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        initialFocus={false}
         showCloseButton={false}
         className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
       >
