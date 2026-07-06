@@ -1,3 +1,7 @@
+0.13.0
+
+  Migrate primary database from MongoDB to SQLite
+
 0.12.0
 
   Upgrade skateboard to 3.4.0

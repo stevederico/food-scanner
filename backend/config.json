@@ -2,7 +2,7 @@
   "staticDir": "../dist",
   "database": {
     "db": "BXFood",
-    "dbType": "mongodb",
-    "connectionString": "${MONGODB_URL}"
+    "dbType": "sqlite",
+    "connectionString": "./databases/BXFood.db"
   }
 }
