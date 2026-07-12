@@ -1,3 +1,17 @@
+
+declare global {
+  interface Window {
+    umami?: {
+      track: (eventName?: string, data?: Record<string, unknown>) => void;
+      identify: (idOrData: string | Record<string, unknown>, data?: Record<string, unknown>) => void;
+    };
+    dottie?: {
+      track: (eventName?: string, data?: Record<string, unknown>) => void;
+      identify: (idOrData: string | Record<string, unknown>, data?: Record<string, unknown>) => void;
+    };
+  }
+}
+
 /**
  * Wrapper for Umami analytics tracking
  * Safely handles umami not being loaded and sanitizes data
