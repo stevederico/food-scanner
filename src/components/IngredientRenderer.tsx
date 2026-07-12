@@ -28,10 +28,13 @@ const COLOR_CLASSES: Record<IngredientColor, string> = {
 
 // Create Map for O(1) lookups instead of O(n) find() calls
 const badIngredientMap = new Map<string, BadIngredient>(
-  (badArray as BadIngredient[])
-    .filter(bad => bad && (bad.name || bad.title))
+  badArray
+    .filter((bad): bad is BadIngredient & { name: string } | BadIngredient & { title: string } =>
+      Boolean(bad && (bad.name || bad.title))
+    )
     .map(bad => {
-      const key = (bad.name || bad.title)!.toLowerCase().replace(/\([^)]*\)/g, '').trim();
+      const label = bad.name ?? bad.title ?? '';
+      const key = label.toLowerCase().replace(/\([^)]*\)/g, '').trim();
       return [key, bad];
     })
 );
