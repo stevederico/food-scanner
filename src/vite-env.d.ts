@@ -10,7 +10,14 @@
  */
 
 declare module '@root/bad_ingredients.json' {
-  const value: unknown[];
+  interface BadIngredientJson {
+    name?: string;
+    title?: string;
+    color?: 'red' | 'yellow' | 'green';
+    baddness_score?: number;
+    description?: string;
+  }
+  const value: BadIngredientJson[];
   export default value;
 }
 
