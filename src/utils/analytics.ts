@@ -54,14 +54,17 @@ const sanitizeEventData = (data: EventData): SanitizedData => {
  * @param data - Event data (optional)
  */
 export const trackEvent = (eventName: string, data: EventData = {}): void => {
-  if (isLocal()) return;
-  if (typeof window !== 'undefined' && window.umami) {
-    try {
-      const sanitizedData = sanitizeEventData(data);
-      window.umami.track(eventName, sanitizedData);
-    } catch (error) {
-      console.warn('Analytics tracking failed:', error);
-    }
+  if (isLocal() || typeof window === 'undefined') return;
+  const sanitizedData = sanitizeEventData(data);
+  try {
+    window.umami?.track?.(eventName, sanitizedData);
+  } catch (error) {
+    console.warn('Umami tracking failed:', error);
+  }
+  try {
+    window.dottie?.track?.(eventName, sanitizedData);
+  } catch (error) {
+    console.warn('Dottie tracking failed:', error);
   }
 };
 
@@ -71,17 +74,18 @@ export const trackEvent = (eventName: string, data: EventData = {}): void => {
  * @param data - User metadata (optional)
  */
 export const identifyUser = (userId: string, data: EventData = {}): void => {
-  if (isLocal()) return;
-  if (typeof window !== 'undefined' && window.umami) {
-    try {
-      if (userId) {
-        window.umami.identify(userId, data);
-      } else {
-        window.umami.identify(data);
-      }
-    } catch (error) {
-      console.warn('User identification failed:', error);
-    }
+  if (isLocal() || typeof window === 'undefined') return;
+  try {
+    if (userId) window.umami?.identify?.(userId, data);
+    else window.umami?.identify?.(data);
+  } catch (error) {
+    console.warn('Umami identification failed:', error);
+  }
+  try {
+    if (userId) window.dottie?.identify?.(userId, data);
+    else window.dottie?.identify?.(data);
+  } catch (error) {
+    console.warn('Dottie identification failed:', error);
   }
 };
 
@@ -89,12 +93,15 @@ export const identifyUser = (userId: string, data: EventData = {}): void => {
  * Track a page view
  */
 export const trackPageView = (): void => {
-  if (isLocal()) return;
-  if (typeof window !== 'undefined' && window.umami) {
-    try {
-      window.umami.track();
-    } catch (error) {
-      console.warn('Page view tracking failed:', error);
-    }
+  if (isLocal() || typeof window === 'undefined') return;
+  try {
+    window.umami?.track?.();
+  } catch (error) {
+    console.warn('Umami page view tracking failed:', error);
+  }
+  try {
+    window.dottie?.track?.();
+  } catch (error) {
+    console.warn('Dottie page view tracking failed:', error);
   }
 };
