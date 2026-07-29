@@ -58,7 +58,14 @@
             "price": "$5.00",
             "title": "Monthly Plan",
             "interval": "monthly",
-            "lookup_key": "food_monthly"
+            "lookup_key": "food_monthly",
+            "features": [
+                "Unlimited Food Scans",
+                "Ingredient Analysis",
+                "Nutrition Insights",
+                "Priority Support",
+                "Cancel Anytime"
+            ]
         }
     ],
     "pricing": {
