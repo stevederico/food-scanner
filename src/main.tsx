@@ -55,5 +55,7 @@ createSkateboardApp({
   appRoutes,
   defaultRoute: 'home',
   wrapper: AnalyticsProvider,
-  overrides: { layout: AppLayout }
+  overrides: { layout: AppLayout },
+  // Legal bodies stay out of the main chunk; routes load src/legal.json on demand.
+  loadLegal: () => import('./legal.json'),
 });

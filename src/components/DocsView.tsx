@@ -1,5 +1,5 @@
+import { AlertCircle, BookOpen, CheckCircle, Info, Scan, Search } from 'lucide-react';
 import Header from '@stevederico/skateboard-ui/Header';
-import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 
 /**
  * Static documentation view explaining how the app works.
@@ -16,7 +16,7 @@ export default function DocsView() {
         {/* App Overview */}
         <section className="mt-6" data-section-id="docs-overview">
           <div className="flex items-center gap-2 mb-3">
-            <DynamicIcon name="BookOpen" className="w-5 h-5 text-blue-500" />
+            <BookOpen className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">About Food Scan</h2>
           </div>
           <div className="bg-accent rounded-lg p-4">
@@ -32,13 +32,13 @@ export default function DocsView() {
         {/* How to Use */}
         <section className="mt-6" data-section-id="docs-how-to-use">
           <div className="flex items-center gap-2 mb-3">
-            <DynamicIcon name="Info" className="w-5 h-5 text-blue-500" />
+            <Info className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">How to Use</h2>
           </div>
           <div className="space-y-3">
             <div className="bg-accent rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <DynamicIcon name="Scan" className="w-4 h-4 text-blue-500" />
+                <Scan className="w-4 h-4 text-blue-500" />
                 <h3 className="font-medium">Scanning Barcodes</h3>
               </div>
               <p className="text-sm leading-relaxed">
@@ -49,7 +49,7 @@ export default function DocsView() {
             </div>
             <div className="bg-accent rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <DynamicIcon name="Search" className="w-4 h-4 text-blue-500" />
+                <Search className="w-4 h-4 text-blue-500" />
                 <h3 className="font-medium">Searching Products</h3>
               </div>
               <p className="text-sm leading-relaxed">
@@ -64,7 +64,7 @@ export default function DocsView() {
         {/* Ingredient Color Guide */}
         <section className="mt-6" data-section-id="docs-color-guide">
           <div className="flex items-center gap-2 mb-3">
-            <DynamicIcon name="AlertCircle" className="w-5 h-5 text-blue-500" />
+            <AlertCircle className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">Ingredient Color Guide</h2>
           </div>
           <div className="bg-accent rounded-lg p-4 space-y-4">
@@ -104,7 +104,7 @@ export default function DocsView() {
         {/* Approval Status */}
         <section className="mt-6" data-section-id="docs-approval-status">
           <div className="flex items-center gap-2 mb-3">
-            <DynamicIcon name="CheckCircle" className="w-5 h-5 text-blue-500" />
+            <CheckCircle className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">Product Approval</h2>
           </div>
           <div className="bg-accent rounded-lg p-4">
@@ -119,7 +119,7 @@ export default function DocsView() {
         {/* About Bixby Apps */}
         <section className="mt-6 mb-8" data-section-id="docs-about">
           <div className="flex items-center gap-2 mb-3">
-            <DynamicIcon name="BookOpen" className="w-5 h-5 text-blue-500" />
+            <BookOpen className="w-5 h-5 text-blue-500" />
             <h2 className="text-lg font-semibold">About Bixby Apps</h2>
           </div>
           <div className="bg-accent rounded-lg p-4">

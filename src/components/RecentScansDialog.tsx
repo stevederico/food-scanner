@@ -1,5 +1,5 @@
+import { Clock, ShoppingBag, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle, DialogClose } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
-import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
 import type { RecentScan } from '../services/ProductService';
 
 /** Props for the RecentScansDialog component. */
@@ -29,11 +29,11 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
       >
         <div className="flex items-center justify-between mb-6">
           <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-            <DynamicIcon name="Clock" className="w-5 h-5" />
+            <Clock className="w-5 h-5" />
             Recent Scans
           </DialogTitle>
           <DialogClose aria-label="Close dialog" className="p-2 rounded-full hover:bg-accent">
-            <DynamicIcon name="X" className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </DialogClose>
         </div>
 
@@ -60,7 +60,7 @@ export default function RecentScansDialog({ isOpen, onClose, recentScans, onSele
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <DynamicIcon name="ShoppingBag" className="w-8 h-8 text-blue-500" />
+                      <ShoppingBag className="w-8 h-8 text-blue-500" />
                     </div>
                   )}
                 </div>
