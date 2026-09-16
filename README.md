@@ -2,27 +2,28 @@
 
 Food and nutrition tracking with barcode scanning.
 
-**Version:** 0.9.3 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
+**Version:** 0.14.0 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
 
 ## Tech Stack
 
-- React 19.2, Vite 7.1, skateboard-ui 1.2.20
-- @zxing/library 0.21.3 for barcode scanning
-- Hono backend, SQLite database
+- React 19.2, Vite 8.2, skateboard-ui 5.1.0, skateboard 5.6.0
+- @zxing/library for barcode scanning
+- Zero-crate Rust backend, SQLite
 - Tailwind CSS v4
 
 ## Setup
 
 ```bash
-deno install
-deno run start    # Frontend :5173 + Backend :8000
+npm install
+npm run start          # Frontend :5173
+cd backend && cargo run   # Backend :8000
 ```
 
 ## Scripts
 
-- `deno run start` — Development (frontend + backend)
-- `deno run build` — Production build
-- `deno run prod` — Deploy to Railway
+- `npm run start` — Frontend only (Vite)
+- `npm run build` — Production frontend build
+- `cd backend && cargo test --locked` — Backend tests
 
 ## Routes
 
