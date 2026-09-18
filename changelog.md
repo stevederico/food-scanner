@@ -1,3 +1,13 @@
+0.14.0
+
+  Upgrade skateboard 5.6.0
+  Replace Hono with zero-crate Rust backend
+  Pin skateboard-ui 5.1.0
+  Rewrite icons lucide-react
+  Split legal json
+  Allow camera and Open Food Facts CSP
+  Honor DB_TYPE=libsql, copy constants.json, sitemap uses food.bixbyapps.com
+
 0.13.0
 
   Migrate primary database from MongoDB to SQLite

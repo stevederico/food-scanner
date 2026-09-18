@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport"  content="width=device-width, initial-scale=1, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <link rel="icon" type="image/png" href="/icons/icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
@@ -27,25 +27,18 @@
 
     <!-- dottie-analytics — parallel with Umami during migration -->
     <script defer src="https://api.dottie.ai/script.js" data-website-id="3e4dc894a2a9a67b8dbcb13510a5029f" data-domains="food.bixbyapps.com"></script>
-    <!-- Prevent dark mode flash -->
-    <script>
-      (function() {
-        const savedTheme = localStorage.getItem('theme');
-        const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const isDark = savedTheme ? savedTheme === 'dark' : systemPrefersDark;
 
-        if (isDark) {
-          document.documentElement.classList.add('dark');
-        }
-      })();
-    </script>
+    <!-- Prevent dark mode flash (classic script: blocks parse, CSP 'self' only). -->
+    <script src="/theme-init.js"></script>
 
-    <script defer type="module" src="/src/main.tsx"></script>
-      <style>
-      body { background: oklch(0.985 0 0); }
+    <!-- Paint the theme background before the stylesheet resolves; no opacity gate, so a
+         failed CSS load degrades to unstyled content instead of a blank page. -->
+    <style>
+      body { background: oklch(0.985 0 0); height: 100%; overscroll-behavior: none; }
       .dark body { background: oklch(0.05 0 0); }
-      #root { opacity: 0; }
     </style>
+
+    <script type="module" src="/src/main.tsx"></script>
   </head>
   <body>
     <div id="root"></div>

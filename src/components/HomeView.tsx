@@ -1,7 +1,7 @@
-import Header from '@stevederico/skateboard-ui/Header';
-import DynamicIcon from '@stevederico/skateboard-ui/DynamicIcon';
-import { Link } from 'react-router';
 import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import { ArrowRight, Clock, Info, Scan, Search, ShoppingBag } from 'lucide-react';
+import Header from '@stevederico/skateboard-ui/Header';
+import { useSafeNavigate } from '@stevederico/skateboard-ui/Utilities';
 import ProductDialog from './ProductDialog';
 import RecentScansDialog from './RecentScansDialog';
 import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
@@ -15,6 +15,7 @@ import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
  * @returns Home view
  */
 export default function HomeView() {
+  const navigate = useSafeNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [product, setProduct] = useState<Product>({ product_name: '', image_url: '' });
@@ -118,7 +119,7 @@ export default function HomeView() {
                 data-umami-event="search-product"
                 className="absolute right-2 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150"
               >
-                <DynamicIcon name="Search" className="w-5 h-5" />
+                <Search className="w-5 h-5" />
               </button>
             </div>
           </form>
@@ -126,29 +127,30 @@ export default function HomeView() {
 
         {/* Scan Button - Primary CTA */}
         <div className="mt-8" data-section-id="scan-cta">
-          <Link
-            to="/app/scan"
+          <button
+            type="button"
+            onClick={() => navigate('/app/scan')}
             data-umami-event="scan-product-cta"
-            className="group flex items-center justify-between p-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            className="group w-full flex items-center justify-between p-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
           >
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/20 rounded-xl">
-                <DynamicIcon name="Scan" className="w-7 h-7 text-white" />
+                <Scan className="w-7 h-7 text-white" />
               </div>
               <div className="text-left">
                 <span className="block text-lg font-semibold text-white">Scan Product</span>
                 <span className="block text-sm text-blue-100">Use camera to scan barcode</span>
               </div>
             </div>
-            <DynamicIcon name="ArrowRight" className="w-6 h-6 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
-          </Link>
+            <ArrowRight className="w-6 h-6 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
+          </button>
         </div>
 
         {/* Recent Scans */}
         <div className="mt-10" data-section-id="recent-scans">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
-              <DynamicIcon name="Clock" className="w-4 h-4" />
+              <Clock className="w-4 h-4" />
               Recent Scans
             </h2>
             {recentScans.length > 0 && (
@@ -158,14 +160,14 @@ export default function HomeView() {
                 className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors duration-150"
               >
                 View All
-                <DynamicIcon name="ArrowRight" className="w-4 h-4" />
+                <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
           <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
             {recentScans.length === 0 ? (
               <div className="w-full py-8 text-center text-gray-400 dark:text-gray-500">
-                <DynamicIcon name="ShoppingBag" className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No recent scans yet</p>
               </div>
             ) : (
@@ -186,7 +188,7 @@ export default function HomeView() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <DynamicIcon name="ShoppingBag" className="w-7 h-7 text-blue-500" />
+                        <ShoppingBag className="w-7 h-7 text-blue-500" />
                       </div>
                     )}
                   </div>
@@ -197,32 +199,11 @@ export default function HomeView() {
           </div>
         </div>
 
-        {/* Healthy Stores */}
-        {/* <div className="mt-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <DynamicIcon name="Store" className="w-5 h-5" />
-              Popular Stores
-            </h2>
-            <DynamicIcon name="ArrowRight" className="w-5 h-5 text-gray-400" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {['Costco', 'Trader Joe\'s', 'Whole Foods'].map(store => (
-              <div key={store} className="bg-accent p-4 rounded-lg shadow-sm">
-                <div className="flex items-center gap-1">
-                  <DynamicIcon name="ShoppingBag" className="w-6 h-6 text-green-500" />
-                  <span className="font-medium">{store}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div> */}
-
         {/* Ingredients Guide */}
         <div className="mt-10 bg-accent rounded-2xl p-5 border border-gray-200 dark:border-gray-700" data-section-id="ingredients-guide">
           <div className="flex items-center gap-2 mb-4">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <DynamicIcon name="Info" className="w-4 h-4 text-blue-500" />
+              <Info className="w-4 h-4 text-blue-500" />
             </div>
             <h2 className="text-base font-semibold">Ingredients Guide</h2>
           </div>
