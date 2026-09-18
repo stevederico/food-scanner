@@ -8,6 +8,7 @@ interface AppConstants {
   appName: string;
   tagline: string;
   companyWebsite: string;
+  appWebsite?: string;
 }
 
 /** Sources the raw constants.json text. Overridable in tests via {@link __setConstantsReaderForTests}. */
@@ -41,7 +42,7 @@ function readConstants(): AppConstants {
   ) {
     throw new Error('constants.json: missing appName, tagline, or companyWebsite');
   }
-  const { appName, tagline, companyWebsite } = parsed;
+  const { appName, tagline, companyWebsite, appWebsite } = parsed as AppConstants;
   if (
     typeof appName !== 'string' ||
     typeof tagline !== 'string' ||
@@ -49,7 +50,12 @@ function readConstants(): AppConstants {
   ) {
     throw new Error('constants.json: appName, tagline, and companyWebsite must be strings');
   }
-  return { appName, tagline, companyWebsite };
+  return {
+    appName,
+    tagline,
+    companyWebsite,
+    appWebsite: typeof appWebsite === 'string' ? appWebsite : undefined,
+  };
 }
 
 /**
@@ -156,8 +162,8 @@ export const dynamicRobotsPlugin = (): Plugin => {
  * @returns robots.txt contents, including the absolute sitemap URL
  */
 export function buildRobotsTxt(): string {
-  const { companyWebsite } = readConstants();
-  const website = toAbsoluteUrl(companyWebsite);
+  const { companyWebsite, appWebsite } = readConstants();
+  const website = toAbsoluteUrl(appWebsite || companyWebsite);
 
   return `User-agent: *
 Allow: /
@@ -221,8 +227,8 @@ export const dynamicSitemapPlugin = (): Plugin => {
  * @returns sitemap.xml contents with today's date as lastmod
  */
 export function buildSitemapXml(): string {
-  const { companyWebsite } = readConstants();
-  const website = toAbsoluteUrl(companyWebsite);
+  const { companyWebsite, appWebsite } = readConstants();
+  const website = toAbsoluteUrl(appWebsite || companyWebsite);
   const currentDate = new Date().toISOString().split('T')[0];
 
   return `<?xml version="1.0" encoding="UTF-8"?>

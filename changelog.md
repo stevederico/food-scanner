@@ -6,6 +6,7 @@
   Rewrite icons lucide-react
   Split legal json
   Allow camera and Open Food Facts CSP
+  Honor DB_TYPE=libsql, copy constants.json, sitemap uses food.bixbyapps.com
 
 0.13.0
 
