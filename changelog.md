@@ -1,3 +1,7 @@
+0.15.0
+
+  Drop aob from CSP
+
 0.14.0
 
   Upgrade skateboard 5.6.0
