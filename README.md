@@ -6,7 +6,7 @@ Food and nutrition tracking with barcode scanning.
 
 ## Tech Stack
 
-- React 19.2, Vite 8.2, skateboard-ui 5.1.0, skateboard 5.6.0
+- React 19.2, Vite 8.2, skateboard-ui 5.11.0, skateboard 5.6.0
 - @zxing/library for barcode scanning
 - Zero-crate Rust backend, SQLite
 - Tailwind CSS v4
