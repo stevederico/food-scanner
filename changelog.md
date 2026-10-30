@@ -1,3 +1,9 @@
+0.16.0
+
+  Refetch subscription events
+  Store subscription id
+  Retry webhook DB errors
+
 0.15.0
 
   Drop aob from CSP
