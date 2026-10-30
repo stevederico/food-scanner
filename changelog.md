@@ -1,3 +1,9 @@
+0.19.0
+
+  Gate food scans
+  Add scan route
+  Show upgrade sheet
+
 0.18.0
 
   Update README versions

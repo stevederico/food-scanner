@@ -1,11 +1,14 @@
-import { useState, useEffect, type ChangeEvent, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from 'react';
 import { ArrowRight, Clock, Info, Scan, Search, ShoppingBag } from 'lucide-react';
 import Header from '@stevederico/skateboard-ui/Header';
-import { useSafeNavigate } from '@stevederico/skateboard-ui/Utilities';
+import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
+import { useUser } from '@stevederico/skateboard-ui/Context';
+import { getBackendURL, getCSRFToken, useSafeNavigate } from '@stevederico/skateboard-ui/Utilities';
 import ProductDialog from './ProductDialog';
 import RecentScansDialog from './RecentScansDialog';
 import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
 import type { Product, RecentScan } from '../services/ProductService';
+import { claimScan } from '../services/scanClaim';
 import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
 
 /**
@@ -16,6 +19,8 @@ import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
  */
 export default function HomeView() {
   const navigate = useSafeNavigate();
+  const user = useUser();
+  const upgradeSheetRef = useRef<UpgradeSheetHandle>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [product, setProduct] = useState<Product>({ product_name: '', image_url: '' });
@@ -60,6 +65,10 @@ export default function HomeView() {
 
   /**
    * Search Open Food Facts by barcode or name and open the product dialog.
+   *
+   * A found product counts as one scan: the backend must admit it (free scans
+   * left, or an active subscription) before it is shown. When the free scans
+   * are gone the upgrade sheet opens instead.
    * @param e - Form submit event
    */
   async function handleSearch(e: FormEvent<HTMLFormElement>) {
@@ -78,6 +87,15 @@ export default function HomeView() {
         } else {
           throw new Error("Product not found");
         }
+      }
+
+      const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken });
+      if (claim.status === 'upgrade') {
+        upgradeSheetRef.current?.show();
+        return;
+      }
+      if (claim.status === 'error') {
+        throw new Error(claim.message);
       }
 
       setProduct(product);
@@ -223,6 +241,8 @@ export default function HomeView() {
           </div>
         </div>
       </main>
+
+      <UpgradeSheet ref={upgradeSheetRef} userEmail={user?.email} />
 
       <ProductDialog
         isOpen={isOpen}

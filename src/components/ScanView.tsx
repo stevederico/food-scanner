@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
 import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
+import { Button } from '@stevederico/skateboard-ui/shadcn/ui/button';
+import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
+import { useUser } from '@stevederico/skateboard-ui/Context';
+import { getBackendURL, getCSRFToken } from '@stevederico/skateboard-ui/Utilities';
 import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
 import type { Product } from '../services/ProductService';
+import { claimScan } from '../services/scanClaim';
 import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
 import ApprovalBadge from './ApprovalBadge';
 
@@ -15,19 +20,40 @@ import ApprovalBadge from './ApprovalBadge';
 export default function ScanView() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const upgradeSheetRef = useRef<UpgradeSheetHandle>(null);
+  // The decoder reports the same barcode on every frame; handle one at a time
+  // so a single scan is looked up and charged once, until "Scan Again".
+  const isHandlingRef = useRef(false);
+  const user = useUser();
   const [ingredientsList, setIngredientsList] = useState("");
   const [product, setProduct] = useState<Product>({ product_name: "", image_url: "" });
   const [open, setOpen] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [upgradeMessage, setUpgradeMessage] = useState("");
 
   /**
    * Fetch and display a scanned product, or surface an error.
+   *
+   * A found product counts as one scan: the backend must admit it (free scans
+   * left, or an active subscription) before it is shown. When the free scans
+   * are gone, scanning pauses and the upgrade sheet opens.
    * @param productID - Decoded barcode value
    */
   async function handleProductScan(productID: string) {
+    if (isHandlingRef.current) return;
+    isHandlingRef.current = true;
     try {
       const product = await fetchProduct(productID);
+      const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken });
+      if (claim.status === 'upgrade') {
+        setUpgradeMessage(claim.message);
+        upgradeSheetRef.current?.show();
+        return;
+      }
+      if (claim.status === 'error') {
+        throw new Error(claim.message);
+      }
       setProduct(product);
       addToRecentScans(product);
       const ingredientsString = extractIngredients(product);
@@ -61,7 +87,10 @@ export default function ScanView() {
     }
   };
 
+  /** Clear the last result and resume decoding. */
   function reset() {
+    isHandlingRef.current = false;
+    setUpgradeMessage("");
     setProduct({ product_name: "", image_url: "" });
     setIngredientsList("");
     if (readerRef.current) {
@@ -83,6 +112,20 @@ export default function ScanView() {
   return (
     <div className="relative h-screen w-screen overflow-hidden" data-section-id="barcode-scanner">
       <video ref={videoRef} className="w-full h-full object-cover absolute inset-0" />
+
+      <UpgradeSheet ref={upgradeSheetRef} userEmail={user?.email} />
+
+      {upgradeMessage ? (
+        <section
+          role="status"
+          aria-live="polite"
+          className="absolute inset-x-0 bottom-0 flex flex-col gap-3 rounded-t-lg bg-background p-6 shadow-lg"
+        >
+          <h2 className="text-center text-lg font-semibold text-balance">{upgradeMessage}</h2>
+          <Button size="lg" onClick={() => upgradeSheetRef.current?.show()}>Upgrade</Button>
+          <Button size="lg" variant="outline" onClick={reset}>Scan Again</Button>
+        </section>
+      ) : null}
 
       <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen);

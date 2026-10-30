@@ -211,6 +211,45 @@ or
 }
 ```
 
+#### POST /api/scan
+Claim one food scan. The app calls this after a barcode scan or search finds a
+product and shows the result only when it answers 200. Requires auth and CSRF.
+Active subscribers (Monthly Plan) are unlimited. Free users spend one unit of the
+same `FREE_USAGE_LIMIT` window that `POST /api/usage` tracks.
+
+**Request Body:** `{}`
+
+**Response (200) - Free User:**
+```json
+{
+  "allowed": true,
+  "remaining": 19,
+  "total": 20,
+  "isSubscriber": false
+}
+```
+
+**Response (200) - Subscriber:**
+```json
+{
+  "allowed": true,
+  "remaining": -1,
+  "total": -1,
+  "isSubscriber": true
+}
+```
+
+**Response (402) - Free Scans Used Up:**
+```json
+{
+  "error": "Upgrade to the Monthly Plan for unlimited food scans",
+  "upgradeRequired": true,
+  "remaining": 0,
+  "total": 20,
+  "isSubscriber": false
+}
+```
+
 ---
 
 ### Payments (Stripe)

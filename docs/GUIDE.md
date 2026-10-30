@@ -1361,6 +1361,7 @@ There is no global per-route request quota. Targeted protections:
 | Request deadline | Every HTTP request | 15s wall clock for headers+body; 30s idle keep-alive. Slow dribbles get 408. Per-syscall `read_timeout` is not enough |
 | Sign-in lockout | Per email + client IP | Failed attempts accumulate in a 15-minute window; the pair locks out after the threshold and decays automatically |
 | Usage limit | Per user, non-subscribers | `POST /api/usage` answers 429 once `FREE_USAGE_LIMIT` operations are consumed in the month |
+| Scan limit | Per user, non-subscribers | `POST /api/scan` answers 402 (upgrade) once `FREE_USAGE_LIMIT` scans are consumed in the month; shares the usage counter |
 
 Neither emits `X-RateLimit-*` headers. Put a reverse proxy or edge WAF in front of the
 server if you need blanket per-IP quotas.

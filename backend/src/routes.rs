@@ -47,6 +47,7 @@ fn dispatch(state: &AppState, req: &Request) -> Response {
         ("GET", "/api/me") => me_get(state, req),
         ("PUT", "/api/me") => me_put(state, req),
         ("POST", "/api/usage") => usage(state, req),
+        ("POST", "/api/scan") => scan(state, req),
         ("POST", "/api/checkout") => checkout(state, req),
         ("POST", "/api/portal") => portal(state, req),
         (m, p) if p.starts_with("/api/") => {
@@ -657,6 +658,55 @@ fn usage_limit_reached(limit: i64) -> Response {
     )
 }
 
+/// Bring a free-tier caller's usage window up to date and, when `is_tracking`,
+/// spend one unit of it.
+///
+/// Shared by `POST /api/usage` and `POST /api/scan` so both draw on the same
+/// `FREE_USAGE_LIMIT` counter.
+///
+/// Returns `Ok(Some(usage))` with the counters after the call, `Ok(None)` when
+/// a tracked call finds no quota left, or `Err(response)` on a database error.
+fn apply_usage(
+    state: &AppState,
+    user_id: &str,
+    mut usage: Usage,
+    limit: i64,
+    is_tracking: bool,
+) -> Result<Option<Usage>, Response> {
+    // A limit below 1 admits nothing, including the first request of a new
+    // window — which the window reset below would otherwise wave through.
+    if is_tracking && limit < 1 {
+        return Ok(None);
+    }
+    let now = config::now_secs();
+    if usage.reset_at.map(|r| now > r).unwrap_or(true) {
+        let new_reset = now + USAGE_WINDOW_SECS;
+        // Reset and first increment together: a separate increment could be
+        // issued by a concurrent request and then erased by this reset.
+        match state
+            .pool
+            .reset_usage_window(user_id, new_reset, is_tracking)
+        {
+            Ok(count) => {
+                usage = Usage {
+                    count,
+                    reset_at: Some(new_reset),
+                }
+            }
+            Err(e) => return Err(db_err(state, "Usage tracking error", &e)),
+        }
+    } else if is_tracking {
+        // The limit is enforced inside the UPDATE, so concurrent requests
+        // cannot both be admitted at the boundary.
+        match state.pool.consume_usage(user_id, limit) {
+            Ok(Some(count)) => usage.count = count,
+            Ok(None) => return Ok(None),
+            Err(e) => return Err(db_err(state, "Usage tracking error", &e)),
+        }
+    }
+    Ok(Some(usage))
+}
+
 fn usage(state: &AppState, req: &Request) -> Response {
     let user_id = match require_auth(state, req) {
         Ok(id) => id,
@@ -703,39 +753,17 @@ fn usage(state: &AppState, req: &Request) -> Response {
         }
     }
     let limit = state.free_usage_limit;
-    let now = config::now_secs();
-    let mut usage = resolve_usage(&user);
-    let is_tracking = operation == "track";
-    // A limit below 1 admits nothing, including the first request of a new
-    // window — which the window reset below would otherwise wave through.
-    if is_tracking && limit < 1 {
-        return usage_limit_reached(limit);
-    }
-    if usage.reset_at.map(|r| now > r).unwrap_or(true) {
-        let new_reset = now + USAGE_WINDOW_SECS;
-        // Reset and first increment together: a separate increment could be
-        // issued by a concurrent request and then erased by this reset.
-        match state
-            .pool
-            .reset_usage_window(&user_id, new_reset, is_tracking)
-        {
-            Ok(count) => {
-                usage = Usage {
-                    count,
-                    reset_at: Some(new_reset),
-                }
-            }
-            Err(e) => return db_err(state, "Usage tracking error", &e),
-        }
-    } else if is_tracking {
-        // The limit is enforced inside the UPDATE, so concurrent requests
-        // cannot both be admitted at the boundary.
-        match state.pool.consume_usage(&user_id, limit) {
-            Ok(Some(count)) => usage.count = count,
-            Ok(None) => return usage_limit_reached(limit),
-            Err(e) => return db_err(state, "Usage tracking error", &e),
-        }
-    }
+    let usage = match apply_usage(
+        state,
+        &user_id,
+        resolve_usage(&user),
+        limit,
+        operation == "track",
+    ) {
+        Ok(Some(u)) => u,
+        Ok(None) => return usage_limit_reached(limit),
+        Err(res) => return res,
+    };
     let remaining = (limit - usage.count).max(0);
     let mut m = BTreeMap::new();
     m.insert("remaining".into(), json::i(remaining));
@@ -755,6 +783,71 @@ fn usage(state: &AppState, req: &Request) -> Response {
         },
     );
     json_res(200, &Json::Obj(m))
+}
+
+/// Upgrade prompt returned once a free user has spent every free scan.
+const SCAN_UPGRADE_MESSAGE: &str = "Upgrade to the Monthly Plan for unlimited food scans";
+
+/// The 402 body returned when a free user has no scans left this window.
+fn scan_upgrade_required(limit: i64) -> Response {
+    json_res(
+        402,
+        &json::obj([
+            ("error", json::s(SCAN_UPGRADE_MESSAGE)),
+            ("upgradeRequired", Json::Bool(true)),
+            ("remaining", json::i(0)),
+            ("total", json::i(limit)),
+            ("isSubscriber", Json::Bool(false)),
+        ]),
+    )
+}
+
+/// `POST /api/scan` — claim one food scan before the app shows a result.
+///
+/// The paid feature of the Monthly Plan is unlimited food scans. Active
+/// subscribers are always admitted (`remaining: -1`). Free users spend one unit
+/// of the shared `FREE_USAGE_LIMIT` window per scan and get a 402 with an
+/// upgrade message once it is gone. Requires auth and CSRF, since a claim
+/// mutates the stored counter.
+fn scan(state: &AppState, req: &Request) -> Response {
+    let user_id = match require_auth(state, req) {
+        Ok(id) => id,
+        Err(r) => return r,
+    };
+    if let Err(res) = require_csrf(state, req, &user_id) {
+        return res;
+    }
+    let user = match state.pool.find_user(&UserQuery::Id(user_id.clone())) {
+        Ok(Some(u)) => u,
+        Ok(None) => return err_json(404, "User not found"),
+        Err(e) => return db_err(state, "Scan claim error", &e),
+    };
+    if user.subscription.as_ref().is_some_and(is_subscriber) {
+        return json_res(
+            200,
+            &json::obj([
+                ("allowed", Json::Bool(true)),
+                ("remaining", json::i(-1)),
+                ("total", json::i(-1)),
+                ("isSubscriber", Json::Bool(true)),
+            ]),
+        );
+    }
+    let limit = state.free_usage_limit;
+    let usage = match apply_usage(state, &user_id, resolve_usage(&user), limit, true) {
+        Ok(Some(u)) => u,
+        Ok(None) => return scan_upgrade_required(limit),
+        Err(res) => return res,
+    };
+    json_res(
+        200,
+        &json::obj([
+            ("allowed", Json::Bool(true)),
+            ("remaining", json::i((limit - usage.count).max(0))),
+            ("total", json::i(limit)),
+            ("isSubscriber", Json::Bool(false)),
+        ]),
+    )
 }
 
 fn checkout(state: &AppState, req: &Request) -> Response {
@@ -1617,6 +1710,132 @@ mod tests {
         req.set_test_body(br#"{"operation":"track"}"#.to_vec());
         let res = handle(&state, req);
         assert_eq!(res.status, 403, "{}", String::from_utf8_lossy(&res.body));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// POST `/api/scan` carrying the auth and CSRF cookies from `signup`.
+    fn scan_request(state: &AppState, signup: &Response) -> Response {
+        let mut req = Request::for_test("POST", "/api/scan");
+        replay_cookies(&mut req, &[signup], true);
+        req.set_test_body(b"{}".to_vec());
+        handle(state, req)
+    }
+
+    /// Give the account `email` a subscription with `status`.
+    fn subscribe(state: &AppState, email: &str, status: &str) {
+        let user = state
+            .pool
+            .find_user(&UserQuery::Email(email.into()))
+            .expect("query")
+            .expect("user");
+        state
+            .pool
+            .update_user_subscription(
+                &user.id,
+                &Subscription {
+                    stripe_id: "cus_scan".into(),
+                    expires: None,
+                    status: status.into(),
+                    subscription_id: None,
+                },
+            )
+            .expect("set subscription");
+    }
+
+    #[test]
+    fn scan_requires_auth() {
+        let (state, dir) = test_state();
+        let res = handle(&state, Request::for_test("POST", "/api/scan"));
+        assert_eq!(res.status, 401, "{}", String::from_utf8_lossy(&res.body));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_requires_csrf() {
+        let (state, dir) = test_state();
+        let signup = signed_up(&state, "scancsrf@example.com");
+        let mut req = Request::for_test("POST", "/api/scan");
+        replay_cookies(&mut req, &[&signup], false);
+        req.set_test_body(b"{}".to_vec());
+        let res = handle(&state, req);
+        assert_eq!(res.status, 403, "{}", String::from_utf8_lossy(&res.body));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_admits_a_free_user_within_the_free_limit() {
+        let (mut state, dir) = test_state();
+        state.free_usage_limit = 2;
+        let signup = signed_up(&state, "scanfree@example.com");
+        let res = scan_request(&state, &signup);
+        assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+        let body = json_body(&res);
+        assert_eq!(body.get("allowed"), Some(&Json::Bool(true)));
+        assert_eq!(body.get_i64("remaining"), Some(1));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_blocks_a_free_user_past_the_free_limit_with_402() {
+        let (mut state, dir) = test_state();
+        state.free_usage_limit = 2;
+        let signup = signed_up(&state, "scanblocked@example.com");
+        for _ in 0..2 {
+            assert_eq!(scan_request(&state, &signup).status, 200);
+        }
+        let res = scan_request(&state, &signup);
+        assert_eq!(res.status, 402, "{}", String::from_utf8_lossy(&res.body));
+        let body = json_body(&res);
+        assert_eq!(body.get_str("error"), Some(SCAN_UPGRADE_MESSAGE));
+        assert_eq!(body.get("upgradeRequired"), Some(&Json::Bool(true)));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_blocks_a_free_user_when_the_free_limit_is_zero() {
+        let (mut state, dir) = test_state();
+        state.free_usage_limit = 0;
+        let signup = signed_up(&state, "scanzero@example.com");
+        assert_eq!(scan_request(&state, &signup).status, 402);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_blocks_a_lapsed_subscriber_past_the_free_limit() {
+        let (mut state, dir) = test_state();
+        state.free_usage_limit = 0;
+        let signup = signed_up(&state, "scanlapsed@example.com");
+        subscribe(&state, "scanlapsed@example.com", "canceled");
+        assert_eq!(scan_request(&state, &signup).status, 402);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_admits_an_active_subscriber_past_the_free_limit() {
+        let (mut state, dir) = test_state();
+        state.free_usage_limit = 0;
+        let signup = signed_up(&state, "scanpaid@example.com");
+        subscribe(&state, "scanpaid@example.com", "active");
+        for _ in 0..3 {
+            let res = scan_request(&state, &signup);
+            assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+            let body = json_body(&res);
+            assert_eq!(body.get("isSubscriber"), Some(&Json::Bool(true)));
+            assert_eq!(body.get_i64("remaining"), Some(-1));
+        }
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_and_usage_track_share_one_free_counter() {
+        let (mut state, dir) = test_state();
+        state.free_usage_limit = 1;
+        let signup = signed_up(&state, "scanshared@example.com");
+        assert_eq!(scan_request(&state, &signup).status, 200);
+        let mut req = Request::for_test("POST", "/api/usage");
+        replay_cookies(&mut req, &[&signup], true);
+        req.set_test_body(br#"{"operation":"track"}"#.to_vec());
+        assert_eq!(handle(&state, req).status, 429);
         std::fs::remove_dir_all(&dir).ok();
     }
 

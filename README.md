@@ -2,7 +2,7 @@
 
 Food and nutrition tracking with barcode scanning.
 
-**Version:** 0.16.0 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
+**Version:** 0.19.0 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
 
 ## Tech Stack
 
@@ -29,6 +29,12 @@ cd backend && cargo run   # Backend :8000
 
 **Public:** `/`, `/terms`, `/privacy`, `/subs`, `/eula`
 **Protected:** `/app/*` (authentication required)
+
+## Plans
+
+- Free: `FREE_USAGE_LIMIT` food scans per 30 days (default 20). Barcode scans and product searches each count once a product is found
+- Monthly Plan ($5, `food_monthly`): unlimited food scans
+- Enforced by `POST /api/scan` (402 when free scans run out). The app then opens the upgrade sheet
 
 ## Deploy
 
