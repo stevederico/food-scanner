@@ -1,3 +1,7 @@
+0.17.0
+
+  Pin skateboard-ui 5.11.0
+
 0.16.0
 
   Refetch subscription events
