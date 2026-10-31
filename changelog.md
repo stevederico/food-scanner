@@ -1,3 +1,8 @@
+0.21.1
+
+  Remove isSubscriber route doc
+  Point to usage check
+
 0.21.0
 
   Trialing counts as paid
