@@ -56,14 +56,15 @@ pub fn preflight(req: &Request, allowed: &[String]) -> Response {
 /// part of the header bytes, and there is exactly one policy.
 ///
 /// App delta: dottie analytics loaders/beacons,
-/// plus Cloudflare Web Analytics. Open Food Facts is fetched from the browser
-/// (barcode lookup). Theme bootstrap is `/theme-init.js` (`'self'`), not inline.
+/// plus Cloudflare Web Analytics. Open Food Facts is fetched by the server
+/// behind the scan gate (`POST /api/scan`), never from the browser, so it is not
+/// in `connect-src`. Theme bootstrap is `/theme-init.js` (`'self'`), not inline.
 const CSP: &str = "default-src 'self'; \
 script-src 'self' https://api.dottie.ai https://static.cloudflareinsights.com; \
 style-src 'self' 'unsafe-inline'; \
 img-src 'self' https:; \
 font-src 'self'; \
-connect-src 'self' https://api.dottie.ai https://cloudflareinsights.com https://us.openfoodfacts.org; \
+connect-src 'self' https://api.dottie.ai https://cloudflareinsights.com; \
 frame-ancestors 'none'";
 
 /// Permissions-Policy: camera is required for live barcode scanning (`ScanView`).
@@ -234,7 +235,7 @@ mod tests {
         let res = apply_secure_headers(Response::empty(200), false);
         assert_eq!(
             header(&res, "Content-Security-Policy"),
-            Some("default-src 'self'; script-src 'self' https://api.dottie.ai https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https:; font-src 'self'; connect-src 'self' https://api.dottie.ai https://cloudflareinsights.com https://us.openfoodfacts.org; frame-ancestors 'none'")
+            Some("default-src 'self'; script-src 'self' https://api.dottie.ai https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' https:; font-src 'self'; connect-src 'self' https://api.dottie.ai https://cloudflareinsights.com; frame-ancestors 'none'")
         );
     }
 

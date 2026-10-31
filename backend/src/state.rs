@@ -43,6 +43,9 @@ pub struct AppState {
     pub port: u16,
     /// Monthly operation allowance for non-subscribers.
     pub free_usage_limit: i64,
+    /// Open Food Facts origin that `POST /api/scan` looks products up on
+    /// (`PRODUCT_API_URL`, default [`crate::food::DEFAULT_PRODUCT_API_URL`]).
+    pub product_api_url: String,
     /// Cached production flag; `NODE_ENV` does not change after startup.
     pub prod: bool,
 }
@@ -194,6 +197,8 @@ impl AppState {
             static_dir,
             port: AppState::resolve_port(),
             free_usage_limit: AppState::resolve_free_usage_limit(),
+            product_api_url: config::env_nonempty("PRODUCT_API_URL")
+                .unwrap_or_else(|| crate::food::DEFAULT_PRODUCT_API_URL.to_string()),
             prod,
         })
     }

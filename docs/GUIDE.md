@@ -1361,7 +1361,7 @@ There is no global per-route request quota. Targeted protections:
 | Request deadline | Every HTTP request | 15s wall clock for headers+body; 30s idle keep-alive. Slow dribbles get 408. Per-syscall `read_timeout` is not enough |
 | Sign-in lockout | Per email + client IP | Failed attempts accumulate in a 15-minute window; the pair locks out after the threshold and decays automatically |
 | Usage limit | Per user, non-subscribers | `POST /api/usage` answers 429 once `FREE_USAGE_LIMIT` operations are consumed in the month |
-| Scan limit | Per user, non-subscribers | `POST /api/scan` answers 402 (upgrade) once `FREE_USAGE_LIMIT` scans are consumed in the month; shares the usage counter |
+| Scan limit | Per user, non-subscribers | `POST /api/scan` answers 402 (upgrade) once `FREE_USAGE_LIMIT` scans are consumed in the month, before any product lookup; shares the usage counter. The lookup and ingredient rating run on the server, so the gate cannot be skipped from the browser |
 
 Neither emits `X-RateLimit-*` headers. Put a reverse proxy or edge WAF in front of the
 server if you need blanket per-IP quotas.
@@ -1398,6 +1398,7 @@ All errors return JSON with an `error` field:
 | `STRIPE_KEY` | Stripe secret key | Yes |
 | `STRIPE_ENDPOINT_SECRET` | Stripe webhook secret | Yes |
 | `FREE_USAGE_LIMIT` | Monthly limit for free users | No (default: 20) |
+| `PRODUCT_API_URL` | Open Food Facts origin used by `POST /api/scan` | No (default: `https://us.openfoodfacts.org`) |
 | `CORS_ORIGINS` | Comma-separated allowed origins | No |
 | `FRONTEND_URL` | Frontend URL for redirects | No |
 | `PORT` | Server port | No (default: 8000) |

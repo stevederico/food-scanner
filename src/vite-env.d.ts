@@ -1,25 +1,10 @@
 /// <reference types="vite/client" />
 
 /**
- * Ambient declarations for app-specific globals and aliased imports.
+ * Ambient declarations for app-specific globals.
  *
- * - `@root/bad_ingredients.json` resolves via the Vite `@root` alias
- *   (project root) and isn't visible to TypeScript's module resolver, so it
- *   is declared here as an untyped JSON module (consumers cast the shape).
  * - `window.umami` is injected by the Umami analytics script tag in index.html.
  */
-
-declare module '@root/bad_ingredients.json' {
-  interface BadIngredientJson {
-    name?: string;
-    title?: string;
-    color?: 'red' | 'yellow' | 'green';
-    baddness_score?: number;
-    description?: string;
-  }
-  const value: BadIngredientJson[];
-  export default value;
-}
 
 /** Umami analytics global injected by the tracking script. */
 interface Umami {

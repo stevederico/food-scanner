@@ -5,10 +5,10 @@ import { Button } from '@stevederico/skateboard-ui/shadcn/ui/button';
 import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
 import { useUser } from '@stevederico/skateboard-ui/Context';
 import { getBackendURL, getCSRFToken } from '@stevederico/skateboard-ui/Utilities';
-import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
-import type { Product } from '../services/ProductService';
+import { addToRecentScans } from '../services/ProductService';
 import { claimScan } from '../services/scanClaim';
-import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
+import type { RatedIngredient, ScannedProduct } from '../services/scanClaim';
+import IngredientRenderer from './IngredientRenderer';
 import ApprovalBadge from './ApprovalBadge';
 
 /**
@@ -25,47 +25,42 @@ export default function ScanView() {
   // so a single scan is looked up and charged once, until "Scan Again".
   const isHandlingRef = useRef(false);
   const user = useUser();
-  const [ingredientsList, setIngredientsList] = useState("");
-  const [product, setProduct] = useState<Product>({ product_name: "", image_url: "" });
+  const [ingredients, setIngredients] = useState<RatedIngredient[]>([]);
+  const [product, setProduct] = useState<ScannedProduct>({ code: "", product_name: "", image_url: "" });
   const [open, setOpen] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [upgradeMessage, setUpgradeMessage] = useState("");
 
   /**
-   * Fetch and display a scanned product, or surface an error.
+   * Scan a decoded barcode through the backend and show the rated product.
    *
-   * A found product counts as one scan: the backend must admit it (free scans
-   * left, or an active subscription) before it is shown. When the free scans
-   * are gone, scanning pauses and the upgrade sheet opens.
+   * The server looks the product up and rates it behind the plan gate: a found
+   * product spends one free scan (subscribers are unlimited). When the free
+   * scans are gone, scanning pauses and the upgrade sheet opens.
    * @param productID - Decoded barcode value
    */
   async function handleProductScan(productID: string) {
     if (isHandlingRef.current) return;
     isHandlingRef.current = true;
-    try {
-      const product = await fetchProduct(productID);
-      const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken });
-      if (claim.status === 'upgrade') {
-        setUpgradeMessage(claim.message);
-        upgradeSheetRef.current?.show();
-        return;
-      }
-      if (claim.status === 'error') {
-        throw new Error(claim.message);
-      }
-      setProduct(product);
-      addToRecentScans(product);
-      const ingredientsString = extractIngredients(product);
-      setIngredientsList(ingredientsString);
-      setIsApproved(checkIsApproved(ingredientsString));
-      setErrorMessage("");
-      setOpen(true);
-    } catch (error) {
-      console.error(error);
-      setErrorMessage(error instanceof Error ? error.message : "Product not found. Try scanning again.");
-      setOpen(true);
+    const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken }, { code: productID });
+    if (claim.status === 'upgrade') {
+      setUpgradeMessage(claim.message);
+      upgradeSheetRef.current?.show();
+      return;
     }
+    if (claim.status === 'error') {
+      setErrorMessage(claim.message);
+      setOpen(true);
+      return;
+    }
+    const { result } = claim;
+    setProduct(result.product);
+    addToRecentScans(result);
+    setIngredients(result.ingredients);
+    setIsApproved(result.approved);
+    setErrorMessage("");
+    setOpen(true);
   }
 
   /** Begin continuous decoding from the rear camera into the video element. */
@@ -91,8 +86,8 @@ export default function ScanView() {
   function reset() {
     isHandlingRef.current = false;
     setUpgradeMessage("");
-    setProduct({ product_name: "", image_url: "" });
-    setIngredientsList("");
+    setProduct({ code: "", product_name: "", image_url: "" });
+    setIngredients([]);
     if (readerRef.current) {
       readerRef.current.reset();
       startScan();
@@ -153,14 +148,14 @@ export default function ScanView() {
                 <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt={product.product_name || 'Product image'} />
                 <div className="absolute inset-0 bg-white/25" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {ingredientsList ? <ApprovalBadge isApproved={isApproved} /> : null}
+                  {ingredients.length ? <ApprovalBadge isApproved={isApproved} /> : null}
                 </div>
               </div>
               <div className="flex justify-between items-center mb-4">
                 <DialogTitle className="text-xl font-semibold">{product.product_name}</DialogTitle>
               </div>
               <div className="flex flex-wrap mb-4 capitalize">
-                <IngredientRenderer ingredients={ingredientsList} />
+                <IngredientRenderer ingredients={ingredients} />
               </div>
               <div className="mt-6 flex">
                 <button

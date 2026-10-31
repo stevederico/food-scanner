@@ -1,3 +1,10 @@
+0.20.0
+
+  Scan on server
+  Rate ingredients server-side
+  Fix libSQL transactions
+  Pin base images
+
 0.19.0
 
   Gate food scans

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
 import ApprovalBadge from './ApprovalBadge';
-import type { Product } from '../services/ProductService';
+import type { ScannedProduct } from '../services/scanClaim';
 
 /** Props for the ProductDialog component. */
 interface ProductDialogProps {
@@ -10,7 +10,7 @@ interface ProductDialogProps {
   /** Called when the dialog should close */
   onClose: () => void;
   /** Product to display */
-  product: Product;
+  product: ScannedProduct;
   /** Rendered ingredient list (e.g. an IngredientRenderer element) */
   ingredientsList: ReactNode;
   /** Whether the product passed the approval check */

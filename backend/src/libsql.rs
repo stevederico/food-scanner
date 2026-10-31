@@ -60,23 +60,33 @@ impl Client {
 
     /// Run SQL with no result rows.
     pub fn exec(&self, sql: &str) -> Result<(), DbError> {
-        self.pipeline(sql, &[], false).map(|_| ())
+        self.pipeline(sql, &[]).map(|_| ())
     }
 
     /// Run a parameterized query and collect rows.
     pub fn query(&self, sql: &str, params: &[Value]) -> Result<Vec<Row>, DbError> {
-        self.pipeline(sql, params, false).map(|out| out.rows)
+        self.pipeline(sql, params).map(|out| out.rows)
     }
 
     /// Run a parameterized write and report rows touched.
     pub fn run(&self, sql: &str, params: &[Value]) -> Result<Changes, DbError> {
-        self.pipeline(sql, params, false).map(|out| out.changes)
+        self.pipeline(sql, params).map(|out| out.changes)
     }
 
-    fn pipeline(&self, sql: &str, params: &[Value], keep_open: bool) -> Result<ExecOut, DbError> {
+    /// Send one statement over Hrana HTTP.
+    ///
+    /// Outside a transaction every statement is its own stream (sent with a
+    /// `close`). A `BEGIN` keeps the stream open and stores its baton, every
+    /// statement after it reuses that baton, and `COMMIT` / `ROLLBACK` closes
+    /// it. Without this each of `BEGIN`, the writes and `COMMIT` ran on its own
+    /// stream: the writes autocommitted and `COMMIT` failed with "no
+    /// transaction is active", so every `Pool::transaction` answered an error
+    /// after its writes had landed (signup 500, usage gate 500).
+    fn pipeline(&self, sql: &str, params: &[Value]) -> Result<ExecOut, DbError> {
         let mut baton = self.baton.lock().unwrap_or_else(|e| e.into_inner());
+        let keep_open = stream_stays_open(sql, baton.is_some());
         let mut requests = vec![execute_request(sql, params)];
-        if !keep_open && baton.is_none() {
+        if !keep_open {
             requests.push(json::obj([("type", json::s("close"))]));
         }
         let mut body_map = std::collections::BTreeMap::new();
@@ -88,17 +98,31 @@ impl Client {
 
         let url = format!("{}/v2/pipeline", self.url);
         let headers = [("x-namespace", self.namespace.as_str())];
-        let res = httpc::post_json(&url, &headers, &body, TIMEOUT_MS)
-            .map_err(|e| DbError::local(format!("libsql: {e}")))?;
+        // A transport failure leaves the stream unusable: drop the baton so
+        // this connection does not keep sending it, and let the next
+        // statement start a fresh stream.
+        let res = match httpc::post_json(&url, &headers, &body, TIMEOUT_MS) {
+            Ok(res) => res,
+            Err(e) => {
+                *baton = None;
+                return Err(DbError::local(format!("libsql: {e}")));
+            }
+        };
         if !res.ok() {
+            *baton = None;
             return Err(DbError::local(format!(
                 "libsql HTTP {} {}",
                 res.status,
                 res.text()
             )));
         }
-        let parsed = json::parse(&res.body)
-            .map_err(|e| DbError::local(format!("libsql JSON: {e}")))?;
+        let parsed = match json::parse(&res.body) {
+            Ok(parsed) => parsed,
+            Err(e) => {
+                *baton = None;
+                return Err(DbError::local(format!("libsql JSON: {e}")));
+            }
+        };
 
         if keep_open {
             *baton = parsed.get_str("baton").map(str::to_string);
@@ -128,6 +152,26 @@ impl Client {
             .path("response.result")
             .ok_or_else(|| DbError::local("libsql execute missing result"))?;
         Ok(parse_execute(result)?)
+    }
+}
+
+/// Whether the Hrana stream stays open after `sql`.
+///
+/// `in_transaction` is true when a baton from an earlier `BEGIN` is held.
+/// `BEGIN` opens the stream, `COMMIT` / `END` / `ROLLBACK` (but not
+/// `ROLLBACK TO` a savepoint) closes it, and anything else keeps whatever
+/// state it found.
+fn stream_stays_open(sql: &str, in_transaction: bool) -> bool {
+    let words: Vec<String> = sql
+        .split_whitespace()
+        .take(2)
+        .map(str::to_ascii_uppercase)
+        .collect();
+    match words.first().map(String::as_str) {
+        Some("BEGIN") => true,
+        Some("COMMIT") | Some("END") => false,
+        Some("ROLLBACK") => in_transaction && words.get(1).map(String::as_str) == Some("TO"),
+        _ => in_transaction,
     }
 }
 
@@ -219,5 +263,28 @@ fn hrana_value(v: &Json) -> Value {
                 Value::Null
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::stream_stays_open;
+
+    #[test]
+    fn begin_opens_and_commit_or_rollback_closes_the_stream() {
+        assert!(stream_stays_open("BEGIN IMMEDIATE", false));
+        assert!(stream_stays_open("  begin", false));
+        assert!(stream_stays_open("UPDATE Users SET x = 1", true));
+        assert!(!stream_stays_open("COMMIT", true));
+        assert!(!stream_stays_open("END", true));
+        assert!(!stream_stays_open("ROLLBACK", true));
+        assert!(stream_stays_open("ROLLBACK TO sp1", true));
+    }
+
+    #[test]
+    fn statements_outside_a_transaction_close_their_stream() {
+        assert!(!stream_stays_open("SELECT 1", false));
+        assert!(!stream_stays_open("INSERT INTO t VALUES (1)", false));
+        assert!(!stream_stays_open("ROLLBACK", false));
     }
 }

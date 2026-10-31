@@ -6,10 +6,11 @@ import { useUser } from '@stevederico/skateboard-ui/Context';
 import { getBackendURL, getCSRFToken, useSafeNavigate } from '@stevederico/skateboard-ui/Utilities';
 import ProductDialog from './ProductDialog';
 import RecentScansDialog from './RecentScansDialog';
-import { fetchProduct, addToRecentScans, extractIngredients } from '../services/ProductService';
-import type { Product, RecentScan } from '../services/ProductService';
+import { addToRecentScans, storedResult } from '../services/ProductService';
+import type { RecentScan } from '../services/ProductService';
 import { claimScan } from '../services/scanClaim';
-import IngredientRenderer, { checkIsApproved } from './IngredientRenderer';
+import type { RatedIngredient, ScannedProduct, ScanResult, ScanTarget } from '../services/scanClaim';
+import IngredientRenderer from './IngredientRenderer';
 
 /**
  * Home view with product search, scan CTA, recent scans, and ingredient guide.
@@ -23,8 +24,8 @@ export default function HomeView() {
   const upgradeSheetRef = useRef<UpgradeSheetHandle>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  const [product, setProduct] = useState<Product>({ product_name: '', image_url: '' });
-  const [ingredientsList, setIngredientsList] = useState('');
+  const [product, setProduct] = useState<ScannedProduct>({ code: '', product_name: '', image_url: '' });
+  const [ingredients, setIngredients] = useState<RatedIngredient[]>([]);
   const [isApproved, setIsApproved] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
@@ -43,74 +44,64 @@ export default function HomeView() {
   }, []);
 
   /**
-   * Look up a previously scanned product and open its dialog.
-   * @param scan - The recent scan that was selected
+   * Show a rated product in the dialog.
+   * @param result - Scan result from the server (fresh or stored)
    */
-  async function handleSelectRecentScan(scan: RecentScan) {
-    try {
-      const product = await fetchProduct(scan.id);
-      setProduct(product);
-      const ingredientsString = extractIngredients(product);
-      setIngredientsList(ingredientsString);
-      setIsApproved(checkIsApproved(ingredientsString));
-      setErrorMessage('');
-      setIsRecentScansOpen(false);
-      setIsOpen(true);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Something went wrong');
-      setIsRecentScansOpen(false);
-      setIsOpen(true);
-    }
+  function showResult(result: ScanResult) {
+    setProduct(result.product);
+    setIngredients(result.ingredients);
+    setIsApproved(result.approved);
+    setErrorMessage('');
+    setIsOpen(true);
   }
 
   /**
-   * Search Open Food Facts by barcode or name and open the product dialog.
+   * Scan a product through the backend and open its dialog.
    *
-   * A found product counts as one scan: the backend must admit it (free scans
-   * left, or an active subscription) before it is shown. When the free scans
-   * are gone the upgrade sheet opens instead.
+   * The server looks the product up and rates it behind the plan gate: a found
+   * product spends one free scan (subscribers are unlimited). When the free
+   * scans are gone the upgrade sheet opens instead.
+   * @param target - Barcode or search text
+   */
+  async function runScan(target: ScanTarget) {
+    const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken }, target);
+    if (claim.status === 'upgrade') {
+      upgradeSheetRef.current?.show();
+      return;
+    }
+    if (claim.status === 'error') {
+      setErrorMessage(claim.message);
+      setIsOpen(true);
+      return;
+    }
+    showResult(claim.result);
+    setRecentScans(addToRecentScans(claim.result));
+  }
+
+  /**
+   * Reopen a recent scan from its stored result; entries saved before results
+   * were stored are scanned again.
+   * @param scan - The recent scan that was selected
+   */
+  async function handleSelectRecentScan(scan: RecentScan) {
+    setIsRecentScansOpen(false);
+    const result = storedResult(scan);
+    if (result) {
+      showResult(result);
+      return;
+    }
+    await runScan({ code: scan.id });
+  }
+
+  /**
+   * Search by barcode or name and open the product dialog.
    * @param e - Form submit event
    */
   async function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    try {
-      let product: Product;
-      if (searchQuery.match(/^[0-9]+$/)) {
-        product = await fetchProduct(searchQuery);
-      } else {
-        const response = await fetch(
-          `https://us.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchQuery)}&json=true&page_size=1`
-        );
-        const data = await response.json();
-        if (data.products?.length > 0) {
-          product = await fetchProduct(data.products[0].code);
-        } else {
-          throw new Error("Product not found");
-        }
-      }
-
-      const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken });
-      if (claim.status === 'upgrade') {
-        upgradeSheetRef.current?.show();
-        return;
-      }
-      if (claim.status === 'error') {
-        throw new Error(claim.message);
-      }
-
-      setProduct(product);
-      const ingredientsString = extractIngredients(product);
-      setIngredientsList(ingredientsString);
-      setIsApproved(checkIsApproved(ingredientsString));
-      setErrorMessage('');
-      setIsOpen(true);
-      const newScans = addToRecentScans(product);
-      setRecentScans(newScans);
-    } catch (error) {
-      console.error(error);
-      setErrorMessage(error instanceof Error ? error.message : "Error searching for product. Please try again.");
-      setIsOpen(true);
-    }
+    const query = searchQuery.trim();
+    if (!query) return;
+    await runScan({ query });
   }
 
   return (
@@ -248,7 +239,7 @@ export default function HomeView() {
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         product={product}
-        ingredientsList={<IngredientRenderer ingredients={ingredientsList} />}
+        ingredientsList={<IngredientRenderer ingredients={ingredients} />}
         isApproved={isApproved}
         errorMessage={errorMessage}
       />

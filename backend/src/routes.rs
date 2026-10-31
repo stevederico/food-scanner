@@ -9,6 +9,7 @@ use crate::auth::{self, JwtError, JwtPayload, TOKEN_EXPIRATION_DAYS};
 use crate::config;
 use crate::crypto::{self, ct_eq};
 use crate::db::{self, AuthRecord, Subscription, Usage, User, UserQuery};
+use crate::food;
 use crate::http::{Cookie, Request, Response, SameSite};
 use crate::json::{self, Json};
 use crate::kdf;
@@ -802,13 +803,47 @@ fn scan_upgrade_required(limit: i64) -> Response {
     )
 }
 
-/// `POST /api/scan` — claim one food scan before the app shows a result.
+/// True when a free caller has a scan left, without spending one.
 ///
-/// The paid feature of the Monthly Plan is unlimited food scans. Active
-/// subscribers are always admitted (`remaining: -1`). Free users spend one unit
-/// of the shared `FREE_USAGE_LIMIT` window per scan and get a 402 with an
-/// upgrade message once it is gone. Requires auth and CSRF, since a claim
-/// mutates the stored counter.
+/// Mirrors [`apply_usage`]: a window that has expired (or never started)
+/// admits the call, since it restarts at zero. Used to answer 402 before the
+/// product lookup; the unit itself is spent after the product is found.
+fn has_free_scan_left(usage: &Usage, limit: i64) -> bool {
+    if limit < 1 {
+        return false;
+    }
+    match usage.reset_at {
+        Some(reset_at) if config::now_secs() <= reset_at => usage.count < limit,
+        _ => true,
+    }
+}
+
+/// The 200 body of a scan: the rated product plus the caller's quota.
+fn scan_result(product: &Json, remaining: i64, total: i64, is_sub: bool) -> Response {
+    let mut body = match food::result_json(product) {
+        Json::Obj(m) => m,
+        _ => BTreeMap::new(),
+    };
+    body.insert("allowed".into(), Json::Bool(true));
+    body.insert("remaining".into(), json::i(remaining));
+    body.insert("total".into(), json::i(total));
+    body.insert("isSubscriber".into(), Json::Bool(is_sub));
+    json_res(200, &Json::Obj(body))
+}
+
+/// `POST /api/scan` — look up and rate one food product. The paid feature.
+///
+/// Body: `{"code": "<barcode>"}` or `{"query": "<name or barcode>"}`. The
+/// server fetches the product from Open Food Facts and rates its ingredients,
+/// so a rated product is only ever produced here, behind the gate (the browser
+/// no longer calls Open Food Facts or ships the ingredient list).
+///
+/// Order: auth (401), CSRF (403), body (400), user, then the plan gate. Active
+/// subscribers are always admitted (`remaining: -1`). A free caller with no
+/// scan left in the shared `FREE_USAGE_LIMIT` window gets 402 with
+/// `upgradeRequired` before any lookup. Otherwise the product is looked up
+/// (404 not found, 502 lookup failed: neither spends a scan), then one unit is
+/// spent atomically; losing that race to a concurrent request is also a 402.
 fn scan(state: &AppState, req: &Request) -> Response {
     let user_id = match require_auth(state, req) {
         Ok(id) => id,
@@ -817,37 +852,41 @@ fn scan(state: &AppState, req: &Request) -> Response {
     if let Err(res) = require_csrf(state, req, &user_id) {
         return res;
     }
+    let target = match json::parse(&req.body)
+        .map_err(|_| "Invalid JSON")
+        .and_then(|b| food::ScanTarget::parse(&b))
+    {
+        Ok(t) => t,
+        Err(msg) => return err_json(400, msg),
+    };
     let user = match state.pool.find_user(&UserQuery::Id(user_id.clone())) {
         Ok(Some(u)) => u,
         Ok(None) => return err_json(404, "User not found"),
         Err(e) => return db_err(state, "Scan claim error", &e),
     };
-    if user.subscription.as_ref().is_some_and(is_subscriber) {
-        return json_res(
-            200,
-            &json::obj([
-                ("allowed", Json::Bool(true)),
-                ("remaining", json::i(-1)),
-                ("total", json::i(-1)),
-                ("isSubscriber", Json::Bool(true)),
-            ]),
-        );
-    }
+    let is_sub = user.subscription.as_ref().is_some_and(is_subscriber);
     let limit = state.free_usage_limit;
-    let usage = match apply_usage(state, &user_id, resolve_usage(&user), limit, true) {
-        Ok(Some(u)) => u,
-        Ok(None) => return scan_upgrade_required(limit),
-        Err(res) => return res,
+    if !is_sub && !has_free_scan_left(&resolve_usage(&user), limit) {
+        return scan_upgrade_required(limit);
+    }
+    let product = match food::lookup(&state.product_api_url, &target) {
+        Ok(p) => p,
+        Err(food::LookupError::NotFound) => return err_json(404, "Product not found"),
+        Err(food::LookupError::Unavailable(e)) => {
+            state
+                .log
+                .error("Product lookup failed", &[("error", json::s(e))]);
+            return err_json(502, "Product lookup failed. Try again.");
+        }
     };
-    json_res(
-        200,
-        &json::obj([
-            ("allowed", Json::Bool(true)),
-            ("remaining", json::i((limit - usage.count).max(0))),
-            ("total", json::i(limit)),
-            ("isSubscriber", Json::Bool(false)),
-        ]),
-    )
+    if is_sub {
+        return scan_result(&product, -1, -1, true);
+    }
+    match apply_usage(state, &user_id, resolve_usage(&user), limit, true) {
+        Ok(Some(u)) => scan_result(&product, (limit - u.count).max(0), limit, false),
+        Ok(None) => scan_upgrade_required(limit),
+        Err(res) => res,
+    }
 }
 
 fn checkout(state: &AppState, req: &Request) -> Response {
@@ -1541,6 +1580,7 @@ mod tests {
             std::env::remove_var("NODE_ENV");
             std::env::remove_var("DB_TYPE");
             std::env::remove_var("LIBSQL_URL");
+            std::env::remove_var("PRODUCT_API_URL");
         }
         let state = AppState::open_in(&dir, 2, Logger::new(true)).expect("open");
         (state, dir)
@@ -1713,12 +1753,84 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
-    /// POST `/api/scan` carrying the auth and CSRF cookies from `signup`.
-    fn scan_request(state: &AppState, signup: &Response) -> Response {
+    /// POST `/api/scan` with `body`, carrying the auth and CSRF cookies from `signup`.
+    fn scan_body(state: &AppState, signup: &Response, body: &str) -> Response {
         let mut req = Request::for_test("POST", "/api/scan");
         replay_cookies(&mut req, &[signup], true);
-        req.set_test_body(b"{}".to_vec());
+        req.set_test_body(body.as_bytes().to_vec());
         handle(state, req)
+    }
+
+    /// Scan the stub's known product (barcode 3017620422003).
+    fn scan_request(state: &AppState, signup: &Response) -> Response {
+        scan_body(state, signup, r#"{"code":"3017620422003"}"#)
+    }
+
+    /// A local stand-in for Open Food Facts. Knows one product (3017620422003,
+    /// one red and one green ingredient), finds it by searching "nutella",
+    /// answers 404 for barcode 404 and 500 for barcode 500. Returns the base
+    /// URL and a counter of requests served.
+    fn product_stub() -> (String, std::sync::Arc<AtomicU64>) {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind stub");
+        let url = format!("http://{}", listener.local_addr().expect("addr"));
+        let hits = std::sync::Arc::new(AtomicU64::new(0));
+        let counter = hits.clone();
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { continue };
+                counter.fetch_add(1, Ordering::SeqCst);
+                let mut buf = [0u8; 4096];
+                let n = stream.read(&mut buf).unwrap_or(0);
+                let head = String::from_utf8_lossy(&buf[..n]).to_string();
+                let path = head.split_whitespace().nth(1).unwrap_or("").to_string();
+                let (status, body) = if path.starts_with("/api/v3/product/3017620422003.json") {
+                    (
+                        200,
+                        r#"{"status":"success","product":{"code":"3017620422003","product_name":"Stub Spread","image_url":"https://images.example.com/x.jpg","ingredients":[{"text":"Ace-K"},{"text":"Acacia gum"}]}}"#,
+                    )
+                } else if path.starts_with("/api/v3/product/500.json") {
+                    (500, "{}")
+                } else if path.starts_with("/api/v3/product/") {
+                    (404, r#"{"status":"failure"}"#)
+                } else if path.starts_with("/cgi/search.pl")
+                    && path.contains("search_terms=nutella")
+                {
+                    (200, r#"{"products":[{"code":"3017620422003"}]}"#)
+                } else if path.starts_with("/cgi/search.pl") {
+                    (200, r#"{"products":[]}"#)
+                } else {
+                    (404, "{}")
+                };
+                let reply = format!(
+                    "HTTP/1.1 {status} X\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                stream.write_all(reply.as_bytes()).ok();
+            }
+        });
+        (url, hits)
+    }
+
+    /// A test state whose scans hit [`product_stub`].
+    fn scan_state(limit: i64) -> (AppState, std::path::PathBuf, std::sync::Arc<AtomicU64>) {
+        let (mut state, dir) = test_state();
+        let (url, hits) = product_stub();
+        state.product_api_url = url;
+        state.free_usage_limit = limit;
+        (state, dir, hits)
+    }
+
+    /// The signed-up user's stored usage count.
+    fn usage_count(state: &AppState, email: &str) -> i64 {
+        state
+            .pool
+            .find_user(&UserQuery::Email(email.into()))
+            .expect("query")
+            .expect("user")
+            .usage
+            .map(|u| u.count)
+            .unwrap_or(0)
     }
 
     /// Give the account `email` a subscription with `status`.
@@ -1744,66 +1856,141 @@ mod tests {
 
     #[test]
     fn scan_requires_auth() {
-        let (state, dir) = test_state();
-        let res = handle(&state, Request::for_test("POST", "/api/scan"));
+        let (state, dir, hits) = scan_state(20);
+        let mut req = Request::for_test("POST", "/api/scan");
+        req.set_test_body(br#"{"code":"3017620422003"}"#.to_vec());
+        let res = handle(&state, req);
         assert_eq!(res.status, 401, "{}", String::from_utf8_lossy(&res.body));
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            0,
+            "signed out must not look anything up"
+        );
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
     fn scan_requires_csrf() {
-        let (state, dir) = test_state();
+        let (state, dir, hits) = scan_state(20);
         let signup = signed_up(&state, "scancsrf@example.com");
         let mut req = Request::for_test("POST", "/api/scan");
         replay_cookies(&mut req, &[&signup], false);
-        req.set_test_body(b"{}".to_vec());
+        req.set_test_body(br#"{"code":"3017620422003"}"#.to_vec());
         let res = handle(&state, req);
         assert_eq!(res.status, 403, "{}", String::from_utf8_lossy(&res.body));
+        assert_eq!(hits.load(Ordering::SeqCst), 0);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
-    fn scan_admits_a_free_user_within_the_free_limit() {
-        let (mut state, dir) = test_state();
-        state.free_usage_limit = 2;
+    fn scan_rejects_a_missing_or_unsafe_target_without_spending() {
+        let (state, dir, hits) = scan_state(20);
+        let signup = signed_up(&state, "scanbad@example.com");
+        for body in ["{}", r#"{"code":"../x"}"#, r#"{"query":"  "}"#, "not json"] {
+            let res = scan_body(&state, &signup, body);
+            assert_eq!(
+                res.status,
+                400,
+                "{body}: {}",
+                String::from_utf8_lossy(&res.body)
+            );
+        }
+        assert_eq!(hits.load(Ordering::SeqCst), 0);
+        assert_eq!(usage_count(&state, "scanbad@example.com"), 0);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_returns_the_rated_product_to_a_free_user_within_the_limit() {
+        let (state, dir, _hits) = scan_state(2);
         let signup = signed_up(&state, "scanfree@example.com");
         let res = scan_request(&state, &signup);
         assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
         let body = json_body(&res);
         assert_eq!(body.get("allowed"), Some(&Json::Bool(true)));
         assert_eq!(body.get_i64("remaining"), Some(1));
+        assert_eq!(
+            body.path("product.product_name").and_then(Json::as_str),
+            Some("Stub Spread")
+        );
+        assert_eq!(body.get("approved"), Some(&Json::Bool(false)));
+        let ingredients = body
+            .get("ingredients")
+            .and_then(Json::as_arr)
+            .expect("ingredients");
+        assert_eq!(ingredients.len(), 2);
+        assert_eq!(ingredients[0].get_str("text"), Some("Ace-K"));
+        assert_eq!(ingredients[0].get_str("color"), Some("red"));
+        assert_eq!(ingredients[1].get_str("color"), Some("green"));
+        assert_eq!(usage_count(&state, "scanfree@example.com"), 1);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
-    fn scan_blocks_a_free_user_past_the_free_limit_with_402() {
-        let (mut state, dir) = test_state();
-        state.free_usage_limit = 2;
+    fn scan_finds_a_product_by_name_search() {
+        let (state, dir, _hits) = scan_state(2);
+        let signup = signed_up(&state, "scansearch@example.com");
+        let res = scan_body(&state, &signup, r#"{"query":"nutella"}"#);
+        assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+        assert_eq!(
+            json_body(&res).path("product.code").and_then(Json::as_str),
+            Some("3017620422003")
+        );
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_not_found_or_lookup_failure_spends_nothing() {
+        let (state, dir, _hits) = scan_state(2);
+        let signup = signed_up(&state, "scanmiss@example.com");
+        assert_eq!(scan_body(&state, &signup, r#"{"code":"404"}"#).status, 404);
+        assert_eq!(
+            scan_body(&state, &signup, r#"{"query":"no such thing"}"#).status,
+            404
+        );
+        assert_eq!(scan_body(&state, &signup, r#"{"code":"500"}"#).status, 502);
+        assert_eq!(usage_count(&state, "scanmiss@example.com"), 0);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn scan_blocks_a_free_user_at_the_limit_with_402_before_any_lookup() {
+        let (state, dir, hits) = scan_state(2);
         let signup = signed_up(&state, "scanblocked@example.com");
         for _ in 0..2 {
             assert_eq!(scan_request(&state, &signup).status, 200);
         }
+        let before = hits.load(Ordering::SeqCst);
         let res = scan_request(&state, &signup);
         assert_eq!(res.status, 402, "{}", String::from_utf8_lossy(&res.body));
         let body = json_body(&res);
         assert_eq!(body.get_str("error"), Some(SCAN_UPGRADE_MESSAGE));
         assert_eq!(body.get("upgradeRequired"), Some(&Json::Bool(true)));
+        assert!(
+            body.get("product").is_none(),
+            "a 402 must not carry the product"
+        );
+        assert_eq!(
+            hits.load(Ordering::SeqCst),
+            before,
+            "no lookup once the free scans are gone"
+        );
+        assert_eq!(usage_count(&state, "scanblocked@example.com"), 2);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
     fn scan_blocks_a_free_user_when_the_free_limit_is_zero() {
-        let (mut state, dir) = test_state();
-        state.free_usage_limit = 0;
+        let (state, dir, hits) = scan_state(0);
         let signup = signed_up(&state, "scanzero@example.com");
         assert_eq!(scan_request(&state, &signup).status, 402);
+        assert_eq!(hits.load(Ordering::SeqCst), 0);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
     fn scan_blocks_a_lapsed_subscriber_past_the_free_limit() {
-        let (mut state, dir) = test_state();
-        state.free_usage_limit = 0;
+        let (state, dir, _hits) = scan_state(0);
         let signup = signed_up(&state, "scanlapsed@example.com");
         subscribe(&state, "scanlapsed@example.com", "canceled");
         assert_eq!(scan_request(&state, &signup).status, 402);
@@ -1812,8 +1999,7 @@ mod tests {
 
     #[test]
     fn scan_admits_an_active_subscriber_past_the_free_limit() {
-        let (mut state, dir) = test_state();
-        state.free_usage_limit = 0;
+        let (state, dir, _hits) = scan_state(0);
         let signup = signed_up(&state, "scanpaid@example.com");
         subscribe(&state, "scanpaid@example.com", "active");
         for _ in 0..3 {
@@ -1822,14 +2008,41 @@ mod tests {
             let body = json_body(&res);
             assert_eq!(body.get("isSubscriber"), Some(&Json::Bool(true)));
             assert_eq!(body.get_i64("remaining"), Some(-1));
+            assert_eq!(
+                body.path("product.code").and_then(Json::as_str),
+                Some("3017620422003")
+            );
         }
+        assert_eq!(usage_count(&state, "scanpaid@example.com"), 0);
         std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
+    fn a_spent_window_that_has_expired_leaves_a_free_scan() {
+        let now = config::now_secs();
+        let spent = |reset_at| Usage { count: 5, reset_at };
+        assert!(!has_free_scan_left(&spent(Some(now + 60)), 5));
+        assert!(has_free_scan_left(&spent(Some(now - 60)), 5));
+        assert!(has_free_scan_left(&spent(None), 5));
+        assert!(has_free_scan_left(
+            &Usage {
+                count: 4,
+                reset_at: Some(now + 60)
+            },
+            5
+        ));
+        assert!(!has_free_scan_left(
+            &Usage {
+                count: 0,
+                reset_at: None
+            },
+            0
+        ));
+    }
+
+    #[test]
     fn scan_and_usage_track_share_one_free_counter() {
-        let (mut state, dir) = test_state();
-        state.free_usage_limit = 1;
+        let (state, dir, _hits) = scan_state(1);
         let signup = signed_up(&state, "scanshared@example.com");
         assert_eq!(scan_request(&state, &signup).status, 200);
         let mut req = Request::for_test("POST", "/api/usage");
