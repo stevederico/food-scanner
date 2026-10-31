@@ -2,7 +2,7 @@
 
 Food and nutrition tracking with barcode scanning.
 
-**Version:** 0.20.0 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
+**Version:** 0.21.0 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
 
 ## Tech Stack
 

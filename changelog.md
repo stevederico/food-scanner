@@ -1,3 +1,8 @@
+0.21.0
+
+  Trialing counts as paid
+  fmt and clippy clean
+
 0.20.0
 
   Scan on server

@@ -115,7 +115,7 @@ CREATE TABLE Auths (
 | `canceled` | Canceled but access until period ends |
 | `past_due` | Payment failed, grace period |
 | `unpaid` | Payment failed, access revoked |
-| `trialing` | In trial period |
+| `trialing` | In trial period; counts as paid, like `active` |
 
 ---
 
@@ -126,7 +126,7 @@ Free users have a monthly usage limit (default: 20).
 - `usage.count` - Incremented on each tracked action
 - `usage.reset_at` - Set to 30 days after first action
 - When `now > reset_at`, counter resets to 0
-- Subscribers (`subscription.status === 'active'`) get unlimited usage
+- Subscribers (`subscription.status` `active` or `trialing`, period not ended) get unlimited usage
 
 ---
 
