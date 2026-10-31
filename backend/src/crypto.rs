@@ -300,11 +300,11 @@ pub fn hex_encode(bytes: &[u8]) -> String {
 /// `Some(bytes)`, or `None` on odd length or a non-hex character.
 pub fn hex_decode(s: &str) -> Option<Vec<u8>> {
     let b = s.as_bytes();
-    if b.len() % 2 != 0 {
+    if !b.len().is_multiple_of(2) {
         return None;
     }
     let mut out = Vec::with_capacity(b.len() / 2);
-    for pair in b.chunks_exact(2) {
+    for pair in b.as_chunks::<2>().0 {
         let hi = hex_val(pair[0])?;
         let lo = hex_val(pair[1])?;
         out.push((hi << 4) | lo);
@@ -687,7 +687,10 @@ mod tests {
 
     #[test]
     fn hex_decode_accepts_uppercase() {
-        assert_eq!(hex_decode("DEADBEEF").unwrap(), vec![0xde, 0xad, 0xbe, 0xef]);
+        assert_eq!(
+            hex_decode("DEADBEEF").unwrap(),
+            vec![0xde, 0xad, 0xbe, 0xef]
+        );
     }
 
     #[test]

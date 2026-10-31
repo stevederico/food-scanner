@@ -4,8 +4,8 @@ use std::path::{Path, PathBuf};
 
 use crate::config::{self, BackendConfig, Logger};
 use crate::db::Pool;
-use crate::json;
 use crate::http;
+use crate::json;
 use crate::stores::{CsrfStore, LockoutStore, RateLimitStore};
 use crate::stripe::StripeClient;
 use crate::stripe_worker::StripeWorker;
@@ -74,14 +74,22 @@ impl AppState {
     /// the same port on both servers.
     pub fn resolve_port() -> u16 {
         let raw = config::env("PORT").unwrap_or_default();
-        let digits: String = raw.trim_start().chars().take_while(char::is_ascii_digit).collect();
+        let digits: String = raw
+            .trim_start()
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
         digits.parse::<u16>().unwrap_or(8000)
     }
 
     /// Resolve `FREE_USAGE_LIMIT`, defaulting to 20.
     pub fn resolve_free_usage_limit() -> i64 {
         let raw = config::env("FREE_USAGE_LIMIT").unwrap_or_default();
-        let digits: String = raw.trim_start().chars().take_while(char::is_ascii_digit).collect();
+        let digits: String = raw
+            .trim_start()
+            .chars()
+            .take_while(char::is_ascii_digit)
+            .collect();
         digits.parse::<i64>().unwrap_or(20)
     }
 
@@ -150,9 +158,8 @@ impl AppState {
                     .map_err(|e| format!("failed to open sqlite at {}: {e}", db_path.display()))?
             }
             "libsql" | "turso" => {
-                let url = config::env_nonempty("LIBSQL_URL").ok_or_else(|| {
-                    "LIBSQL_URL is required when DB_TYPE=libsql".to_string()
-                })?;
+                let url = config::env_nonempty("LIBSQL_URL")
+                    .ok_or_else(|| "LIBSQL_URL is required when DB_TYPE=libsql".to_string())?;
                 if let Some(admin) = config::env_nonempty("LIBSQL_ADMIN_URL") {
                     crate::libsql::Client::ensure_namespace(&admin, &cfg.database.db)
                         .map_err(|e| format!("libsql namespace: {e}"))?;

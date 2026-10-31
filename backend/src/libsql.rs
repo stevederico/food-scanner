@@ -143,15 +143,12 @@ impl Client {
                 .and_then(Json::as_str)
                 .unwrap_or("libsql error")
                 .to_string();
-            return Err(DbError {
-                code: 19,
-                message,
-            });
+            return Err(DbError { code: 19, message });
         }
         let result = first
             .path("response.result")
             .ok_or_else(|| DbError::local("libsql execute missing result"))?;
-        Ok(parse_execute(result)?)
+        parse_execute(result)
     }
 }
 

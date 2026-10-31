@@ -21,8 +21,10 @@ fn main() {
 
     spawn_cleanup(Arc::clone(&state));
 
-    let mut cfg = http::Config::default();
-    cfg.port = state.port;
+    let cfg = http::Config {
+        port: state.port,
+        ..Default::default()
+    };
     let st = Arc::clone(&state);
     let server = match http::serve(cfg, move |req| routes::handle(&st, req)) {
         Ok(s) => s,
@@ -89,20 +91,25 @@ extern "C" {
 
 fn spawn_cleanup(state: Arc<AppState>) {
     spawn_periodic(&state, "csrf-cleanup", 60 * 60, routes::run_csrf_cleanup);
-    spawn_periodic(&state, "lockout-cleanup", 15 * 60, routes::run_lockout_cleanup);
-    spawn_periodic(&state, "webhook-cleanup", 60 * 60, routes::run_webhook_cleanup);
+    spawn_periodic(
+        &state,
+        "lockout-cleanup",
+        15 * 60,
+        routes::run_lockout_cleanup,
+    );
+    spawn_periodic(
+        &state,
+        "webhook-cleanup",
+        60 * 60,
+        routes::run_webhook_cleanup,
+    );
 }
 
 /// Run `task` against shared state forever, every `period_secs`.
 ///
 /// A failed spawn is logged rather than dropped silently — losing a janitor
 /// thread means a store grows unbounded, which is worth an operator's attention.
-fn spawn_periodic(
-    state: &Arc<AppState>,
-    name: &str,
-    period_secs: u64,
-    task: fn(&AppState),
-) {
+fn spawn_periodic(state: &Arc<AppState>, name: &str, period_secs: u64, task: fn(&AppState)) {
     let state_for_thread = Arc::clone(state);
     let spawned = thread::Builder::new()
         .name(name.to_string())

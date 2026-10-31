@@ -63,7 +63,11 @@ enum Method {
 /// # Errors
 /// [`HttpError`] when the transfer fails; an HTTP error *status* is a
 /// successful transfer and comes back in [`HttpResponse::status`].
-pub fn get(url: &str, headers: &[(&str, &str)], timeout_ms: i64) -> Result<HttpResponse, HttpError> {
+pub fn get(
+    url: &str,
+    headers: &[(&str, &str)],
+    timeout_ms: i64,
+) -> Result<HttpResponse, HttpError> {
     request(Method::Get, url, headers, None, timeout_ms)
 }
 
@@ -108,6 +112,7 @@ pub fn form_encode(value: &str) -> String {
 // ==== FFI ====
 
 /// Opaque libcurl easy handle.
+#[allow(clippy::upper_case_acronyms, reason = "mirrors libcurl's C type name")]
 #[repr(C)]
 struct CURL {
     _private: [u8; 0],
@@ -190,7 +195,12 @@ fn global_init() {
 /// `catch_unwind`; a panic — or a body past [`MAX_BODY_BYTES`] — is reported as
 /// a short write, which makes libcurl abort the transfer with
 /// `CURLE_WRITE_ERROR` rather than aborting the process.
-extern "C" fn write_cb(ptr: *mut c_char, size: usize, nmemb: usize, userdata: *mut c_void) -> usize {
+extern "C" fn write_cb(
+    ptr: *mut c_char,
+    size: usize,
+    nmemb: usize,
+    userdata: *mut c_void,
+) -> usize {
     let result = std::panic::catch_unwind(|| {
         let len = size.saturating_mul(nmemb);
         if len == 0 || ptr.is_null() || userdata.is_null() {
@@ -249,7 +259,10 @@ fn curl_message(code: c_int) -> String {
         if p.is_null() {
             None
         } else {
-            std::ffi::CStr::from_ptr(p).to_str().ok().map(str::to_string)
+            std::ffi::CStr::from_ptr(p)
+                .to_str()
+                .ok()
+                .map(str::to_string)
         }
     };
     text.unwrap_or_else(|| format!("curl error {code}"))
@@ -310,7 +323,11 @@ fn request(
         let mut rc = curl_easy_setopt(h, CURLOPT_URL, c_url.as_ptr().cast::<c_void>());
         rc |= curl_easy_setopt(h, CURLOPT_USERAGENT, user_agent.as_ptr().cast::<c_void>());
         rc |= curl_easy_setopt(h, CURLOPT_WRITEFUNCTION, write_cb as CurlCb);
-        rc |= curl_easy_setopt(h, CURLOPT_WRITEDATA, (&mut sink as *mut Vec<u8>).cast::<c_void>());
+        rc |= curl_easy_setopt(
+            h,
+            CURLOPT_WRITEDATA,
+            (&mut sink as *mut Vec<u8>).cast::<c_void>(),
+        );
         rc |= curl_easy_setopt(h, CURLOPT_TIMEOUT_MS, timeout_ms.max(1) as c_long);
         rc |= curl_easy_setopt(h, CURLOPT_CONNECTTIMEOUT_MS, CONNECT_TIMEOUT_MS);
         rc |= curl_easy_setopt(h, CURLOPT_FOLLOWLOCATION, 0 as c_long);
@@ -380,9 +397,21 @@ mod tests {
     #[test]
     fn http_response_ok_covers_only_2xx() {
         let body = Vec::new();
-        assert!(HttpResponse { status: 200, body: body.clone() }.ok());
-        assert!(HttpResponse { status: 299, body: body.clone() }.ok());
-        assert!(!HttpResponse { status: 300, body: body.clone() }.ok());
+        assert!(HttpResponse {
+            status: 200,
+            body: body.clone()
+        }
+        .ok());
+        assert!(HttpResponse {
+            status: 299,
+            body: body.clone()
+        }
+        .ok());
+        assert!(!HttpResponse {
+            status: 300,
+            body: body.clone()
+        }
+        .ok());
         assert!(!HttpResponse { status: 199, body }.ok());
     }
 

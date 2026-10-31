@@ -111,7 +111,9 @@ pub struct CsrfStore {
 impl CsrfStore {
     /// Create an empty store.
     pub fn new() -> CsrfStore {
-        CsrfStore { inner: Mutex::new(HashMap::new()) }
+        CsrfStore {
+            inner: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Read the entry for a user, if any.
@@ -121,7 +123,13 @@ impl CsrfStore {
 
     /// Store (or replace) a user's token, stamped `now_ms`.
     pub fn set(&self, user_id: &str, token: String, now_ms: i64) {
-        self.lock().insert(user_id.to_string(), CsrfEntry { token, timestamp: now_ms });
+        self.lock().insert(
+            user_id.to_string(),
+            CsrfEntry {
+                token,
+                timestamp: now_ms,
+            },
+        );
     }
 
     /// Forget a user's token (sign-out).
@@ -201,7 +209,9 @@ pub struct LockoutStore {
 impl LockoutStore {
     /// Create an empty store.
     pub fn new() -> LockoutStore {
-        LockoutStore { inner: Mutex::new(HashMap::new()) }
+        LockoutStore {
+            inner: Mutex::new(HashMap::new()),
+        }
     }
 
     /// Check whether this email is locked for this client address, clearing an
@@ -216,7 +226,10 @@ impl LockoutStore {
         let key = Self::key(email, peer_ip);
         let mut map = self.lock();
         let Some(record) = map.get(&key).cloned() else {
-            return LockStatus { locked: false, remaining_time: 0 };
+            return LockStatus {
+                locked: false,
+                remaining_time: 0,
+            };
         };
         match record.locked_until {
             Some(until) if now_ms < until => LockStatus {
@@ -226,9 +239,15 @@ impl LockoutStore {
             },
             Some(_) => {
                 map.remove(&key);
-                LockStatus { locked: false, remaining_time: 0 }
+                LockStatus {
+                    locked: false,
+                    remaining_time: 0,
+                }
             }
-            None => LockStatus { locked: false, remaining_time: 0 },
+            None => LockStatus {
+                locked: false,
+                remaining_time: 0,
+            },
         }
     }
 
@@ -416,6 +435,10 @@ impl RateLimitStore {
     }
 
     /// Number of tracked IPs.
+    #[allow(
+        clippy::len_without_is_empty,
+        reason = "len is only read to report the store size"
+    )]
     pub fn len(&self) -> usize {
         self.lock().len()
     }
