@@ -131,7 +131,7 @@ mod tests {
     fn accepts_ordinary_emails() {
         for e in [
             "a@b.co",
-            "steve@bixbyapps.com",
+            "jane@example.com",
             "first.last+tag@sub.example.org",
             "x1@y-z.io",
         ] {

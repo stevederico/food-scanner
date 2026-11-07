@@ -1,3 +1,7 @@
+0.22.0
+
+  Example test email
+
 0.21.2
 
   Bump skateboard-ui 5.11.4
