@@ -1,8 +1,8 @@
-# BXFood
+# Food Scanner
 
 Food and nutrition tracking with barcode scanning.
 
-**Version:** 0.21.2 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com) | **Railway Service:** `bxfood`
+**Version:** 0.23.0 | **Domain:** [food.bixbyapps.com](https://food.bixbyapps.com)
 
 ## Tech Stack
 
@@ -40,10 +40,7 @@ cd backend && cargo run   # Backend :8000
 
 ## Deploy
 
-```bash
-railway link -p bixby -e production -s bxfood
-railway up
-```
+Ships as one Docker image (see `Dockerfile`) serving the frontend and API on `PORT`. Set `JWT_SECRET`, `CORS_ORIGINS` and `FRONTEND_URL`.
 
 ---
 

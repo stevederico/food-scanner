@@ -1,3 +1,8 @@
+0.23.0
+
+  Retitle README Food Scanner
+  Generic deploy notes
+
 0.22.0
 
   Example test email
