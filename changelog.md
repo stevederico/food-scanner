@@ -1,3 +1,8 @@
+0.23.3
+
+  Scans free and unlimited
+  Remove 402 gate
+
 0.23.2
 
   Door unlock test
