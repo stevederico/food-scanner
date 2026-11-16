@@ -82,7 +82,7 @@ impl AppState {
         digits.parse::<u16>().unwrap_or(8000)
     }
 
-    /// Resolve `FREE_USAGE_LIMIT`, defaulting to 20.
+    /// Resolve `FREE_USAGE_LIMIT`, defaulting to 5 (a small free allowance; the Monthly Plan is unlimited).
     pub fn resolve_free_usage_limit() -> i64 {
         let raw = config::env("FREE_USAGE_LIMIT").unwrap_or_default();
         let digits: String = raw
@@ -90,7 +90,7 @@ impl AppState {
             .chars()
             .take_while(char::is_ascii_digit)
             .collect();
-        digits.parse::<i64>().unwrap_or(20)
+        digits.parse::<i64>().unwrap_or(5)
     }
 
     /// The origin used for Stripe success/cancel/return URLs.
@@ -253,9 +253,9 @@ mod tests {
     }
 
     #[test]
-    fn usage_limit_defaults_to_20() {
+    fn usage_limit_defaults_to_5() {
         std::env::remove_var("FREE_USAGE_LIMIT");
-        assert_eq!(AppState::resolve_free_usage_limit(), 20);
+        assert_eq!(AppState::resolve_free_usage_limit(), 5);
     }
 
     #[test]

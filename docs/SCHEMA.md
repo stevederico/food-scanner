@@ -121,7 +121,7 @@ CREATE TABLE Auths (
 
 ## Usage Tracking
 
-Free users have a monthly usage limit (default: 20).
+Free users have a monthly usage limit (default: 5).
 
 - `usage.count` - Incremented on each tracked action
 - `usage.reset_at` - Set to 30 days after first action

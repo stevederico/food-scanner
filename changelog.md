@@ -1,7 +1,8 @@
-0.23.3
+0.24.0
 
-  Scans free and unlimited
-  Remove 402 gate
+  Restore free scan limit
+  Default limit 5
+  Paid plan unlimited
 
 0.23.2
 

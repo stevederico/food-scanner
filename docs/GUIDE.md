@@ -1397,7 +1397,7 @@ All errors return JSON with an `error` field:
 | `JWT_SECRET` | Secret for JWT signing | Yes |
 | `STRIPE_KEY` | Stripe secret key | Yes |
 | `STRIPE_ENDPOINT_SECRET` | Stripe webhook secret | Yes |
-| `FREE_USAGE_LIMIT` | Monthly limit for free users | No (default: 20) |
+| `FREE_USAGE_LIMIT` | Monthly limit for free users | No (default: 5) |
 | `PRODUCT_API_URL` | Open Food Facts origin used by `POST /api/scan` | No (default: `https://us.openfoodfacts.org`) |
 | `CORS_ORIGINS` | Comma-separated allowed origins | No |
 | `FRONTEND_URL` | Frontend URL for redirects | No |
@@ -1538,7 +1538,7 @@ CREATE TABLE Auths (
 
 ### Usage Tracking
 
-Free users have a monthly usage limit (default: 20).
+Free users have a monthly usage limit (default: 5).
 
 - `usage.count` - Incremented on each tracked action
 - `usage.reset_at` - Set to 30 days after first action

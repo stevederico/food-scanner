@@ -604,7 +604,7 @@ Backend requires `.env` file with:
 - `STRIPE_ENDPOINT_SECRET` - Webhook verification (required)
 - `CORS_ORIGINS` - Comma-separated allowed origins (production)
 - `FRONTEND_URL` - Frontend URL for Stripe redirects (production)
-- `FREE_USAGE_LIMIT` - Usage limit for free users (default: 20)
+- `FREE_USAGE_LIMIT` - Usage limit for free users (default: 5)
 - `NODE_ENV` - `production` enables HSTS, skips `.env` loading, and requires a 32+ character `JWT_SECRET`
 - `PORT` - Listen port (default: 8000)
 

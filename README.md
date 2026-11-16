@@ -32,9 +32,10 @@ cd backend && cargo run   # Backend :8000
 
 ## Plans
 
-- Food scans are free and unlimited for every signed-in user. Barcode scans and product searches run through `POST /api/scan`
-- The Monthly Plan ($5, `food_monthly`) no longer unlocks any extra scan quota
-- The product lookup (Open Food Facts) and the ingredient rating run on the server. The browser never calls Open Food Facts and never gets the ingredient list
+- Free: `FREE_USAGE_LIMIT` food scans per 30 days (default 5). Barcode scans and product searches each count once a product is found
+- Monthly Plan ($5, `food_monthly`): unlimited food scans
+- Enforced by `POST /api/scan` (402 when free scans run out). The app then opens the upgrade sheet
+- The product lookup (Open Food Facts) and the ingredient rating run on the server behind that gate. The browser never calls Open Food Facts and never gets the ingredient list, so the paywall cannot be skipped from the browser
 - Recent scans reopen from the result saved on the device, without another scan
 
 ## Deploy

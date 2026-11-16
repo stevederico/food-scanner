@@ -202,23 +202,28 @@ or
 ```
 
 #### POST /api/scan
-Scan one food product. Free and unlimited: there is no scan limit, and a scan
-never counts against `FREE_USAGE_LIMIT`. The server looks the product up on
+Scan one food product: the paid feature. The server looks the product up on
 Open Food Facts (`PRODUCT_API_URL`, default `https://us.openfoodfacts.org`) and
-rates its ingredients against `backend/src/bad_ingredients.json`. The browser
-does not call Open Food Facts and does not ship the ingredient list (it is not
-in the CSP `connect-src`). Requires auth and CSRF.
+rates its ingredients against `backend/src/bad_ingredients.json`, both behind the
+plan gate, so a rated product never reaches the browser without passing it. The
+browser does not call Open Food Facts and does not ship the ingredient list
+(it is not in the CSP `connect-src`). Requires auth and CSRF.
+
+Active subscribers (Monthly Plan) are unlimited. A free user with no scans left in
+the `FREE_USAGE_LIMIT` window (the same counter `POST /api/usage` tracks) gets 402
+before any lookup. Otherwise the product is looked up and one scan is spent only
+when it is found; 404 (not found) and 502 (lookup failed) spend nothing.
 
 **Request Body:** `{"code": "3017620422003"}` (barcode, ASCII letters and digits, up
 to 64) or `{"query": "nutella"}` (name search, up to 200 characters; an all-digit
 query is treated as a barcode). Anything else answers 400.
 
-**Response (200):**
+**Response (200) - Free User:**
 ```json
 {
   "allowed": true,
-  "remaining": -1,
-  "total": -1,
+  "remaining": 19,
+  "total": 20,
   "isSubscriber": false,
   "product": { "code": "3017620422003", "product_name": "Nutella", "image_url": "https://images.openfoodfacts.org/..." },
   "ingredients": [{ "text": "Sugar", "color": "red" }, { "text": "Hazelnuts", "color": null }],
@@ -226,11 +231,23 @@ query is treated as a barcode). Anything else answers 400.
 }
 ```
 
-`remaining` and `total` are always `-1`; `isSubscriber` reports the plan only.
+**Response (200) - Subscriber:** same body with `"remaining": -1`, `"total": -1`,
+`"isSubscriber": true`.
 
-**Response (404):** `{"error": "Product not found"}`
+**Response (404):** `{"error": "Product not found"}` (no scan spent)
 
-**Response (502):** `{"error": "Product lookup failed. Try again."}`
+**Response (502):** `{"error": "Product lookup failed. Try again."}` (no scan spent)
+
+**Response (402) - Free Scans Used Up:**
+```json
+{
+  "error": "Upgrade to the Monthly Plan for unlimited food scans",
+  "upgradeRequired": true,
+  "remaining": 0,
+  "total": 20,
+  "isSubscriber": false
+}
+```
 
 ---
 
@@ -347,7 +364,7 @@ All errors return JSON with an `error` field:
 | `JWT_SECRET` | Secret for JWT signing | Yes |
 | `STRIPE_KEY` | Stripe secret key | Yes |
 | `STRIPE_ENDPOINT_SECRET` | Stripe webhook secret | Yes |
-| `FREE_USAGE_LIMIT` | Monthly limit for free users | No (default: 20) |
+| `FREE_USAGE_LIMIT` | Monthly limit for free users | No (default: 5) |
 | `PRODUCT_API_URL` | Open Food Facts origin used by `POST /api/scan` | No (default: `https://us.openfoodfacts.org`) |
 | `CORS_ORIGINS` | Comma-separated allowed origins | No |
 | `FRONTEND_URL` | Frontend URL for redirects | No |
