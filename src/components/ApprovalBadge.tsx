@@ -1,4 +1,4 @@
-import { ThumbsDown, ThumbsUp } from 'lucide-react';
+import { ThumbsDown, ThumbsUp } from '@stevederico/skateboard-ui/icons';
 
 /** Props for the ApprovalBadge component. */
 interface ApprovalBadgeProps {

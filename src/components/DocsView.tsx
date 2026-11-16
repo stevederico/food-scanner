@@ -1,4 +1,4 @@
-import { AlertCircle, BookOpen, CheckCircle, Info, Scan, Search } from 'lucide-react';
+import { AlertCircle, BookOpen, CheckCircle, Info, Scan, Search } from '@stevederico/skateboard-ui/icons';
 import Header from '@stevederico/skateboard-ui/Header';
 
 /**

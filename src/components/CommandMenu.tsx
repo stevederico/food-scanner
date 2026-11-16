@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, type ComponentType } from 'react';
-import { BookOpen, Camera, House, type LucideProps } from 'lucide-react';
+import { BookOpen, Camera, House, type LucideProps } from '@stevederico/skateboard-ui/icons';
 import { getState } from '@stevederico/skateboard-ui/Context';
 import { useSafeNavigate } from '@stevederico/skateboard-ui/Utilities';
 import {
@@ -10,7 +10,7 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from '@stevederico/skateboard-ui/shadcn/ui/command';
+} from '@stevederico/skateboard-ui/ui/command';
 
 /** Page entry from constants.json's pages array. */
 interface PageEntry {

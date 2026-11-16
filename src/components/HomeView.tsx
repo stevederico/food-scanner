@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from 'react';
-import { ArrowRight, Clock, Info, Scan, Search, ShoppingBag } from 'lucide-react';
+import { ArrowRight, Clock, Info, Scan, Search, ShoppingBag } from '@stevederico/skateboard-ui/icons';
 import Header from '@stevederico/skateboard-ui/Header';
 import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
 import { useUser } from '@stevederico/skateboard-ui/Context';

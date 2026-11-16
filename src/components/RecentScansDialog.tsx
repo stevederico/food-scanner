@@ -1,5 +1,5 @@
-import { Clock, ShoppingBag, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogTitle, DialogClose } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
+import { Clock, ShoppingBag, X } from '@stevederico/skateboard-ui/icons';
+import { Dialog, DialogContent, DialogTitle, DialogClose } from '@stevederico/skateboard-ui/ui/dialog';
 import type { RecentScan } from '../services/ProductService';
 
 /** Props for the RecentScansDialog component. */

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/ui/dialog';
 import ApprovalBadge from './ApprovalBadge';
 import type { ScannedProduct } from '../services/scanClaim';
 

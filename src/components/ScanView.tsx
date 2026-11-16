@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
-import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/shadcn/ui/dialog';
-import { Button } from '@stevederico/skateboard-ui/shadcn/ui/button';
+import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/ui/dialog';
+import { Button } from '@stevederico/skateboard-ui/ui/button';
 import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
 import { useUser } from '@stevederico/skateboard-ui/Context';
 import { getBackendURL, getCSRFToken } from '@stevederico/skateboard-ui/Utilities';
