@@ -2093,6 +2093,52 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
     }
 
+    /// The door end to end: a free user is stopped at the limit (402), a signed
+    /// `checkout.session.completed` webhook arrives, and the same user then
+    /// scans without a limit (`remaining: -1`, nothing spent).
+    #[test]
+    fn a_signed_checkout_webhook_unlocks_scanning_for_the_buyer() {
+        let mut mock = crate::stripe::StripeMock::default();
+        mock.subscriptions.insert(
+            "sub_door".into(),
+            r#"{"id":"sub_door","status":"active","current_period_end":1900000000}"#.into(),
+        );
+        let (mut state, dir) = stripe_state_with_mock(mock);
+        let (url, _hits) = product_stub();
+        state.product_api_url = url;
+        state.free_usage_limit = 1;
+        let signup = signed_up(&state, "door@example.com");
+
+        assert_eq!(scan_request(&state, &signup).status, 200);
+        assert_eq!(
+            scan_request(&state, &signup).status,
+            402,
+            "the free scan is spent, so the next scan is gated"
+        );
+
+        let payload = br#"{
+            "id":"evt_door_done",
+            "type":"checkout.session.completed",
+            "data":{"object":{
+                "customer":"cus_door",
+                "customer_email":"door@example.com",
+                "subscription":"sub_door"
+            }}
+        }"#;
+        let res = handle(&state, signed_webhook(payload));
+        assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+
+        for _ in 0..3 {
+            let res = scan_request(&state, &signup);
+            assert_eq!(res.status, 200, "{}", String::from_utf8_lossy(&res.body));
+            let body = json_body(&res);
+            assert_eq!(body.get("isSubscriber"), Some(&Json::Bool(true)));
+            assert_eq!(body.get_i64("remaining"), Some(-1));
+        }
+        assert_eq!(usage_count(&state, "door@example.com"), 1);
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
     #[test]
     fn a_spent_window_that_has_expired_leaves_a_free_scan() {
         let now = config::now_secs();
