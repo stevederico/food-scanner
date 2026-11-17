@@ -1,9 +1,6 @@
 import { readFileSync } from 'node:fs';
 import type { Plugin, ViteDevServer } from 'vite';
 
-/**
- * Shape of the fields read from src/constants.json by these plugins.
- */
 interface AppConstants {
   appName: string;
   tagline: string;
@@ -11,26 +8,12 @@ interface AppConstants {
   appWebsite?: string;
 }
 
-/** Sources the raw constants.json text. Overridable in tests via {@link __setConstantsReaderForTests}. */
 let constantsReader: () => string = () => readFileSync('src/constants.json', 'utf8');
 
-/**
- * Test-only seam: override how {@link readConstants} sources its raw JSON, so tests
- * don't have to mock the `node:fs` builtin (whose named/default exports don't survive
- * `--experimental-test-module-mocks` reliably across Node versions).
- *
- * @param reader - Returns the raw constants.json string
- */
 export function __setConstantsReaderForTests(reader: () => string): void {
   constantsReader = reader;
 }
 
-/**
- * Read and validate src/constants.json at the filesystem boundary.
- *
- * @returns Parsed app constants
- * @throws If constants.json is missing required string fields
- */
 function readConstants(): AppConstants {
   const parsed: unknown = JSON.parse(constantsReader());
   if (
@@ -42,7 +25,8 @@ function readConstants(): AppConstants {
   ) {
     throw new Error('constants.json: missing appName, tagline, or companyWebsite');
   }
-  const { appName, tagline, companyWebsite, appWebsite } = parsed as AppConstants;
+  const { appName, tagline, companyWebsite } = parsed;
+  const appWebsite = 'appWebsite' in parsed ? parsed.appWebsite : undefined;
   if (
     typeof appName !== 'string' ||
     typeof tagline !== 'string' ||
@@ -58,27 +42,10 @@ function readConstants(): AppConstants {
   };
 }
 
-/**
- * Normalize a website value to an absolute https URL when no scheme is present.
- *
- * @param website - Raw companyWebsite value from constants.json
- * @returns Fully-qualified URL
- */
 function toAbsoluteUrl(website: string): string {
   return website.startsWith('http') ? website : `https://${website}`;
 }
 
-/**
- * Serve a build-time generated file from the dev server on the same path it ships at.
- *
- * Keeps `npm run start` and `npm run build` byte-identical for robots.txt, sitemap.xml,
- * and manifest.json — without committing stale copies under `public/`.
- *
- * @param server - Vite dev server
- * @param route - Absolute request path to intercept (e.g. `/robots.txt`)
- * @param contentType - Value for the `Content-Type` response header
- * @param build - Generator returning the file body
- */
 function serveGenerated(
   server: ViteDevServer,
   route: string,
@@ -91,14 +58,6 @@ function serveGenerated(
   });
 }
 
-/**
- * Custom logger plugin to simplify Vite server startup output
- *
- * Overrides default Vite URL printer to show single clean message.
- * Suppresses verbose network address output.
- *
- * @returns Vite plugin object
- */
 export const customLoggerPlugin = (): Plugin => {
   return {
     name: 'custom-logger',
@@ -110,15 +69,6 @@ export const customLoggerPlugin = (): Plugin => {
   };
 };
 
-/**
- * HTML template variable replacement plugin
- *
- * Replaces {{APP_NAME}}, {{TAGLINE}}, {{COMPANY_WEBSITE}} placeholders
- * in index.html with values from constants.json at build time. Enables
- * dynamic metadata without build script complexity.
- *
- * @returns Vite plugin object
- */
 export const htmlReplacePlugin = (): Plugin => {
   return {
     name: 'html-replace',
@@ -133,17 +83,6 @@ export const htmlReplacePlugin = (): Plugin => {
   };
 };
 
-/**
- * Dynamic robots.txt generation plugin
- *
- * Generates robots.txt at build time with:
- * - Allow-all baseline for conventional crawlers
- * - Explicit allow for AI search bots (GPTBot, ChatGPT-User, PerplexityBot, ClaudeBot, anthropic-ai, Google-Extended)
- * - Disallow for training-only crawlers (CCBot)
- * - Sitemap reference from constants.json
- *
- * @returns Vite plugin object
- */
 export const dynamicRobotsPlugin = (): Plugin => {
   return {
     name: 'dynamic-robots',
@@ -156,11 +95,6 @@ export const dynamicRobotsPlugin = (): Plugin => {
   };
 };
 
-/**
- * Build the robots.txt body from constants.json.
- *
- * @returns robots.txt contents, including the absolute sitemap URL
- */
 export function buildRobotsTxt(): string {
   const { companyWebsite, appWebsite } = readConstants();
   const website = toAbsoluteUrl(appWebsite || companyWebsite);
@@ -195,20 +129,6 @@ Sitemap: ${website}/sitemap.xml
 `;
 }
 
-/**
- * Dynamic sitemap.xml generation plugin
- *
- * Generates sitemap.xml at build time with static pages:
- * - / (priority 1.0, weekly)
- * - /terms (priority 0.8, monthly)
- * - /privacy (priority 0.8, monthly)
- * - /subs (priority 0.7, monthly)
- * - /eula (priority 0.7, monthly)
- *
- * Uses current build date for lastmod. Reads website URL from constants.json.
- *
- * @returns Vite plugin object
- */
 export const dynamicSitemapPlugin = (): Plugin => {
   return {
     name: 'dynamic-sitemap',
@@ -221,11 +141,6 @@ export const dynamicSitemapPlugin = (): Plugin => {
   };
 };
 
-/**
- * Build the sitemap.xml body for the shell's public routes.
- *
- * @returns sitemap.xml contents with today's date as lastmod
- */
 export function buildSitemapXml(): string {
   const { companyWebsite, appWebsite } = readConstants();
   const website = toAbsoluteUrl(appWebsite || companyWebsite);
@@ -266,20 +181,6 @@ export function buildSitemapXml(): string {
 </urlset>`;
 }
 
-/**
- * Dynamic PWA manifest.json generation plugin
- *
- * Generates Web App Manifest at build time with:
- * - App name and description from constants.json
- * - Icon configuration (600x600 PNG from public/icons)
- * - Standalone display mode
- * - Start URL pointing to /app
- * - Black theme color, white background
- *
- * Enables Add to Home Screen and PWA functionality.
- *
- * @returns Vite plugin object
- */
 export const dynamicManifestPlugin = (): Plugin => {
   return {
     name: 'dynamic-manifest',
@@ -292,11 +193,6 @@ export const dynamicManifestPlugin = (): Plugin => {
   };
 };
 
-/**
- * Build the Web App Manifest body from constants.json.
- *
- * @returns Pretty-printed manifest.json contents
- */
 export function buildManifestJson(): string {
   const { appName, tagline } = readConstants();
 
@@ -328,3 +224,38 @@ export function buildManifestJson(): string {
     2
   );
 }
+
+const MAX_PORT = 65535;
+const CONSTANTS_MODULE = '/src/constants.json';
+
+export type Env = Record<string, string | undefined>;
+
+export function envPort(env: Env, name: string, fallback: number): number {
+  const raw = env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > MAX_PORT) {
+    throw new Error(`${name} must be a port number from 1 to ${MAX_PORT}, got "${raw}"`);
+  }
+  return port;
+}
+
+export function withDevBackendPort(constantsSource: string, backendPort: number): string {
+  const parsed: unknown = JSON.parse(constantsSource);
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('constants.json: expected an object');
+  }
+  return JSON.stringify({ ...parsed, devBackendURL: `http://localhost:${backendPort}/api` });
+}
+
+export const devBackendPortPlugin = (env: Env): Plugin => {
+  return {
+    name: 'dev-backend-port',
+    apply: 'serve',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!env.SKATEBOARD_BACKEND_PORT || !id.split('?')[0].endsWith(CONSTANTS_MODULE)) return null;
+      return { code: withDevBackendPort(code, envPort(env, 'SKATEBOARD_BACKEND_PORT', 0)), map: null };
+    }
+  };
+};

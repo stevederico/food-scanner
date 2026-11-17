@@ -1,5 +1,3 @@
-//! Skateboard backend process entry: bind HTTP, serve, shut down on SIGTERM.
-
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
@@ -54,7 +52,7 @@ fn main() {
         thread::sleep(Duration::from_millis(200));
     }
 
-    let name = if LAST_SIGNAL.load(Ordering::SeqCst) == 2 {
+    let name = if LAST_SIGNAL.load(Ordering::SeqCst) == SIGINT as u8 {
         "SIGINT"
     } else {
         "SIGTERM"
@@ -66,6 +64,9 @@ fn main() {
     eprintln!("Database connections closed");
 }
 
+const SIGINT: i32 = 2;
+const SIGTERM: i32 = 15;
+
 static STOP: AtomicBool = AtomicBool::new(false);
 static LAST_SIGNAL: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
 
@@ -74,12 +75,11 @@ extern "C" fn on_signal(sig: i32) {
     STOP.store(true, Ordering::SeqCst);
 }
 
-/// Install SIGINT/SIGTERM handlers. System `signal(3)`, not a crate.
 fn install_signals() {
     #[cfg(unix)]
     unsafe {
-        libc_signal(2, on_signal); // SIGINT
-        libc_signal(15, on_signal); // SIGTERM
+        libc_signal(SIGINT, on_signal);
+        libc_signal(SIGTERM, on_signal);
     }
 }
 
@@ -90,7 +90,6 @@ extern "C" {
 }
 
 fn spawn_cleanup(state: Arc<AppState>) {
-    spawn_periodic(&state, "csrf-cleanup", 60 * 60, routes::run_csrf_cleanup);
     spawn_periodic(
         &state,
         "lockout-cleanup",
@@ -105,10 +104,6 @@ fn spawn_cleanup(state: Arc<AppState>) {
     );
 }
 
-/// Run `task` against shared state forever, every `period_secs`.
-///
-/// A failed spawn is logged rather than dropped silently — losing a janitor
-/// thread means a store grows unbounded, which is worth an operator's attention.
 fn spawn_periodic(state: &Arc<AppState>, name: &str, period_secs: u64, task: fn(&AppState)) {
     let state_for_thread = Arc::clone(state);
     let spawned = thread::Builder::new()

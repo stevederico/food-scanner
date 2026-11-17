@@ -1,8 +1,8 @@
 {
   "name": "BXFood",
   "private": false,
-  "version": "0.26.0",
-  "skateboardVersion": "5.6.0",
+  "version": "0.27.0",
+  "skateboardVersion": "5.27.0",
   "type": "module",
   "engines": {
     "node": ">=24.0.0"
@@ -13,23 +13,28 @@
     "build": "npm run typecheck && vite build --mode production",
     "prod": "npm run typecheck && vite build --mode production",
     "install-all": "npm install",
-    "postinstall": "git config core.hooksPath .githooks || true",
+    "postinstall": "git config core.hooksPath >/dev/null 2>&1 || git config core.hooksPath .githooks || true",
     "verify:ui": "node scripts/verify-ui-version.mjs",
     "typecheck": "tsc -p tsconfig.json",
     "test": "npm run typecheck && npm run test:build && npm run test:docs",
-    "test:build": "node --experimental-test-module-mocks --test vite.plugins.test.js scripts/verify-ui-version.test.js scripts/update-skateboard.test.js scripts/version-consistency.test.js src/services/scanClaim.test.ts",
-    "test:docs": "node scripts/test-docs.mjs"
+    "test:build": "node --experimental-test-module-mocks --test vite.plugins.test.js scripts/verify-ui-version.test.js scripts/update-skateboard.test.js scripts/version-consistency.test.js tests/scanClaim.test.ts",
+    "test:docs": "node scripts/test-docs.mjs",
+    "guardrails:install": "npm ci --prefix guardrails --no-audit --no-fund",
+    "lint": "oxlint",
+    "test:guardrails": "node --test \"guardrails/eslint-plugin/**/*.test.js\"",
+    "depcruise": "node guardrails/node_modules/dependency-cruiser/bin/dependency-cruiser.mjs --config .dependency-cruiser.js .",
+    "verify": "node --test --test-concurrency=1 --test-reporter=spec guardrails/verify/verify.e2e.js guardrails/verify/ports.e2e.js"
   },
   "dependencies": {
-    "@stevederico/skateboard-ui": "5.19.0",
+    "@stevederico/skateboard-ui": "5.26.0",
     "@zxing/library": "^0.21.3",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@types/react": "19.2.18",
-    "@types/react-dom": "19.2.7",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "typescript": "7.0.2",
-    "vite": "8.2.2"
+    "vite": "8.3.7"
   }
 }

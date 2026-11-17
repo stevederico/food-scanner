@@ -1,23 +1,16 @@
-import { AlertCircle, BookOpen, CheckCircle, Info, Scan, Search } from '@stevederico/skateboard-ui/icons';
 import Header from '@stevederico/skateboard-ui/Header';
+import { AlertCircle, BookOpen, CheckCircle, Info, Scan, Search } from '../icons';
 
-/**
- * Static documentation view explaining how the app works.
- *
- * @component
- * @returns Documentation page
- */
 export default function DocsView() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header buttonClass="" title="Documentation" />
 
       <main className="flex-1 px-4 pb-20">
-        {/* App Overview */}
         <section className="mt-6" data-section-id="docs-overview">
           <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">About Food Scan</h2>
+            <BookOpen className="size-5 text-app" />
+            <h2 className="text-lg font-semibold text-balance">About Food Scan</h2>
           </div>
           <div className="bg-accent rounded-lg p-4">
             <p className="text-sm leading-relaxed">
@@ -28,18 +21,16 @@ export default function DocsView() {
             </p>
           </div>
         </section>
-
-        {/* How to Use */}
         <section className="mt-6" data-section-id="docs-how-to-use">
           <div className="flex items-center gap-2 mb-3">
-            <Info className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">How to Use</h2>
+            <Info className="size-5 text-app" />
+            <h2 className="text-lg font-semibold text-balance">How to Use</h2>
           </div>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <div className="bg-accent rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Scan className="w-4 h-4 text-blue-500" />
-                <h3 className="font-medium">Scanning Barcodes</h3>
+                <Scan className="size-4 text-app" />
+                <h3 className="font-medium text-balance">Scanning Barcodes</h3>
               </div>
               <p className="text-sm leading-relaxed">
                 Tap the Scan button on the home screen to open the camera.
@@ -49,8 +40,8 @@ export default function DocsView() {
             </div>
             <div className="bg-accent rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Search className="w-4 h-4 text-blue-500" />
-                <h3 className="font-medium">Searching Products</h3>
+                <Search className="size-4 text-app" />
+                <h3 className="font-medium text-balance">Searching Products</h3>
               </div>
               <p className="text-sm leading-relaxed">
                 Use the search bar on the home screen to find products by name
@@ -60,18 +51,16 @@ export default function DocsView() {
             </div>
           </div>
         </section>
-
-        {/* Ingredient Color Guide */}
         <section className="mt-6" data-section-id="docs-color-guide">
           <div className="flex items-center gap-2 mb-3">
-            <AlertCircle className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">Ingredient Color Guide</h2>
+            <AlertCircle className="size-5 text-app" />
+            <h2 className="text-lg font-semibold text-balance">Ingredient Color Guide</h2>
           </div>
-          <div className="bg-accent rounded-lg p-4 space-y-4">
+          <div className="bg-accent rounded-lg p-4 flex flex-col gap-4">
             <div className="flex items-start gap-3">
-              <div className="w-4 h-4 bg-green-500 rounded-full mt-0.5 flex-shrink-0"></div>
+              <div className="size-4 bg-success rounded-full mt-0.5 flex-shrink-0"></div>
               <div>
-                <h3 className="font-medium text-green-600 dark:text-green-400">Safe</h3>
+                <h3 className="font-medium text-success text-balance">Safe</h3>
                 <p className="text-sm">
                   Generally recognized as safe. These ingredients have no known
                   health concerns and are considered healthy or neutral.
@@ -79,9 +68,9 @@ export default function DocsView() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-4 h-4 bg-yellow-500 rounded-full mt-0.5 flex-shrink-0"></div>
+              <div className="size-4 bg-warning rounded-full mt-0.5 flex-shrink-0"></div>
               <div>
-                <h3 className="font-medium text-yellow-600 dark:text-yellow-400">Caution</h3>
+                <h3 className="font-medium text-warning text-balance">Caution</h3>
                 <p className="text-sm">
                   Use with moderation. These ingredients may have some health
                   concerns or are best consumed in limited quantities.
@@ -89,9 +78,9 @@ export default function DocsView() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <div className="w-4 h-4 bg-red-500 rounded-full mt-0.5 flex-shrink-0"></div>
+              <div className="size-4 bg-danger rounded-full mt-0.5 flex-shrink-0"></div>
               <div>
-                <h3 className="font-medium text-red-600 dark:text-red-400">Avoid</h3>
+                <h3 className="font-medium text-danger text-balance">Avoid</h3>
                 <p className="text-sm">
                   Best to avoid. These ingredients are associated with potential
                   health risks and are flagged for your awareness.
@@ -100,12 +89,10 @@ export default function DocsView() {
             </div>
           </div>
         </section>
-
-        {/* Approval Status */}
         <section className="mt-6" data-section-id="docs-approval-status">
           <div className="flex items-center gap-2 mb-3">
-            <CheckCircle className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">Product Approval</h2>
+            <CheckCircle className="size-5 text-app" />
+            <h2 className="text-lg font-semibold text-balance">Product Approval</h2>
           </div>
           <div className="bg-accent rounded-lg p-4">
             <p className="text-sm leading-relaxed">
@@ -115,28 +102,26 @@ export default function DocsView() {
             </p>
           </div>
         </section>
-
-        {/* About Bixby Apps */}
         <section className="mt-6 mb-8" data-section-id="docs-about">
           <div className="flex items-center gap-2 mb-3">
-            <BookOpen className="w-5 h-5 text-blue-500" />
-            <h2 className="text-lg font-semibold">About Bixby Apps</h2>
+            <BookOpen className="size-5 text-app" />
+            <h2 className="text-lg font-semibold text-balance">About Bixby Apps</h2>
           </div>
           <div className="bg-accent rounded-lg p-4">
             <p className="text-sm leading-relaxed mb-3">
               Food Scan is developed by Bixby Apps, LLC. We build simple,
               useful mobile applications that help people in their daily lives.
             </p>
-            <div className="text-sm space-y-1">
+            <div className="text-sm flex flex-col gap-1">
               <p>
                 <span className="font-medium">Website:</span>{' '}
-                <a href="https://www.bixbyapps.com" data-umami-event="visit-website-link" className="text-blue-500 underline">
+                <a href="https://www.bixbyapps.com" className="text-app underline">
                   www.bixbyapps.com
                 </a>
               </p>
               <p>
                 <span className="font-medium">Support:</span>{' '}
-                <a href="mailto:support@bixbyapps.com" data-umami-event="contact-support-link" className="text-blue-500 underline">
+                <a href="mailto:support@bixbyapps.com" className="text-app underline">
                   support@bixbyapps.com
                 </a>
               </p>

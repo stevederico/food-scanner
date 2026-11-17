@@ -1,8 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { claimScan, parseScanClaim, parseScanResult, NOT_FOUND_MESSAGE, UPGRADE_MESSAGE } from './scanClaim.ts';
+import { claimScan, parseScanClaim, parseScanResult, NOT_FOUND_MESSAGE, UPGRADE_MESSAGE } from '../src/services/scanClaim.ts';
 
-/** A fetch stub that answers each call with the next queued status and body. */
 function queuedFetch(replies: Array<{ status: number; body: unknown }>) {
   const calls: Array<{ url: string; init: RequestInit | undefined }> = [];
   const fetchImpl: typeof fetch = async (input, init) => {
@@ -13,7 +12,6 @@ function queuedFetch(replies: Array<{ status: number; body: unknown }>) {
   return { fetchImpl, calls };
 }
 
-/** A server 200 body for one product. */
 const SCANNED = {
   allowed: true,
   remaining: 3,

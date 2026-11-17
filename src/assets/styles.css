@@ -1,12 +1,10 @@
 @import "@stevederico/skateboard-ui/styles.css";
 
-/* This app's plain CSS: the classes src/ uses that skateboard-ui's styles.css does not
-   define, a few shell rules repeated after them so they keep their precedence, and the
-   brand and dark-mode overrides. No Tailwind: edit by hand. A className token missing
-   here and in skateboard-ui's CSS fails lint (no-unknown-classes). */
 
 @layer theme {
   :root, :host {
+    --color-app-foreground: var(--color-white);
+    --color-app-strong: var(--color-blue-600);
     --color-red-50: oklch(97.1% .013 17.38);
     --color-red-400: oklch(70.4% .191 22.216);
     --color-red-500: oklch(63.7% .237 25.331);
@@ -781,4 +779,114 @@
   --color-warning-foreground: oklch(98% .02 85);
   --color-info: oklch(70% .15 240);
   --color-info-foreground: oklch(98% .02 240);
+}
+
+@layer utilities {
+  .bg-accent\! {
+    background-color: var(--accent) !important;
+  }
+
+  .items-stretch {
+    align-items: stretch;
+  }
+
+  .gap-0 {
+    gap: 0;
+  }
+
+  .whitespace-normal {
+    white-space: normal;
+  }
+
+  .active\:scale-100:active {
+    --tw-scale-x: 100%;
+    --tw-scale-y: 100%;
+    --tw-scale-z: 100%;
+    scale: var(--tw-scale-x) var(--tw-scale-y);
+  }
+
+  .focus-visible\:border-transparent:focus-visible {
+    border-color: transparent;
+  }
+
+  .focus-visible\:ring-app:focus-visible {
+    --tw-ring-color: var(--color-app);
+  }
+
+  @media (width >= 48rem) {
+    .md\:text-base {
+      font-size: var(--text-base);
+      line-height: var(--tw-leading, var(--text-base--line-height));
+    }
+  }
+
+  .size-3 {
+    width: calc(var(--spacing) * 3);
+    height: calc(var(--spacing) * 3);
+  }
+
+  .size-screen {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .text-app-foreground {
+    color: var(--color-app-foreground);
+  }
+
+  .text-app-foreground\/70 {
+    color: color-mix(in oklab, var(--color-app-foreground) 70%, transparent);
+  }
+
+  .text-app-foreground\/80 {
+    color: color-mix(in oklab, var(--color-app-foreground) 80%, transparent);
+  }
+
+  .bg-app-foreground\/20 {
+    background-color: color-mix(in oklab, var(--color-app-foreground) 20%, transparent);
+  }
+
+  .bg-app-foreground\/25 {
+    background-color: color-mix(in oklab, var(--color-app-foreground) 25%, transparent);
+  }
+
+  .from-app {
+    --tw-gradient-from: var(--color-app);
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+
+  .to-app-strong {
+    --tw-gradient-to: var(--color-app-strong);
+    --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var(--tw-gradient-to-position));
+  }
+
+  .shadow-app\/25 {
+    --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-app) 25%, transparent) var(--tw-shadow-alpha), transparent);
+  }
+
+  .focus\:ring-app:focus {
+    --tw-ring-color: var(--color-app);
+  }
+
+  @media (hover: hover) {
+    .hover\:bg-app-strong:hover {
+      background-color: var(--color-app-strong);
+    }
+
+    .hover\:text-app-strong:hover {
+      color: var(--color-app-strong);
+    }
+
+    .hover\:ring-app:hover {
+      --tw-ring-color: var(--color-app);
+    }
+
+    .hover\:shadow-app\/40:hover {
+      --tw-shadow-color: color-mix(in oklab, color-mix(in oklab, var(--color-app) 40%, transparent) var(--tw-shadow-alpha), transparent);
+    }
+
+    .group-hover\:text-app-foreground:is(:where(.group):hover *) {
+      color: var(--color-app-foreground);
+    }
+  }
 }

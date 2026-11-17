@@ -1,23 +1,19 @@
+import { Button } from '@stevederico/skateboard-ui/ui/button';
+import { Input } from '@stevederico/skateboard-ui/ui/input';
 import { useState, useEffect, useRef, type ChangeEvent, type FormEvent } from 'react';
-import { ArrowRight, Clock, Info, Scan, Search, ShoppingBag } from '@stevederico/skateboard-ui/icons';
 import Header from '@stevederico/skateboard-ui/Header';
 import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
 import { useUser } from '@stevederico/skateboard-ui/Context';
 import { getBackendURL, getCSRFToken, useSafeNavigate } from '@stevederico/skateboard-ui/Utilities';
+import { ArrowRight, Clock, Info, Scan, Search, ShoppingBag } from '../icons';
 import ProductDialog from './ProductDialog';
 import RecentScansDialog from './RecentScansDialog';
-import { addToRecentScans, storedResult } from '../services/ProductService';
-import type { RecentScan } from '../services/ProductService';
+import { addToRecentScans, storedResult } from '../services/productService';
+import type { RecentScan } from '../services/productService';
 import { claimScan } from '../services/scanClaim';
 import type { RatedIngredient, ScannedProduct, ScanResult, ScanTarget } from '../services/scanClaim';
 import IngredientRenderer from './IngredientRenderer';
 
-/**
- * Home view with product search, scan CTA, recent scans, and ingredient guide.
- *
- * @component
- * @returns Home view
- */
 export default function HomeView() {
   const navigate = useSafeNavigate();
   const user = useUser();
@@ -43,10 +39,7 @@ export default function HomeView() {
     }
   }, []);
 
-  /**
-   * Show a rated product in the dialog.
-   * @param result - Scan result from the server (fresh or stored)
-   */
+  
   function showResult(result: ScanResult) {
     setProduct(result.product);
     setIngredients(result.ingredients);
@@ -55,14 +48,7 @@ export default function HomeView() {
     setIsOpen(true);
   }
 
-  /**
-   * Scan a product through the backend and open its dialog.
-   *
-   * The server looks the product up and rates it behind the plan gate: a found
-   * product spends one free scan (subscribers are unlimited). When the free
-   * scans are gone the upgrade sheet opens instead.
-   * @param target - Barcode or search text
-   */
+  
   async function runScan(target: ScanTarget) {
     const claim = await claimScan({ backendURL: getBackendURL(), getCsrfToken: getCSRFToken }, target);
     if (claim.status === 'upgrade') {
@@ -78,11 +64,7 @@ export default function HomeView() {
     setRecentScans(addToRecentScans(claim.result));
   }
 
-  /**
-   * Reopen a recent scan from its stored result; entries saved before results
-   * were stored are scanned again.
-   * @param scan - The recent scan that was selected
-   */
+  
   async function handleSelectRecentScan(scan: RecentScan) {
     setIsRecentScansOpen(false);
     const result = storedResult(scan);
@@ -93,10 +75,7 @@ export default function HomeView() {
     await runScan({ code: scan.id });
   }
 
-  /**
-   * Search by barcode or name and open the product dialog.
-   * @param e - Form submit event
-   */
+  
   async function handleSearch(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const query = searchQuery.trim();
@@ -109,83 +88,82 @@ export default function HomeView() {
       <Header buttonClass="" title="Welcome" />
       
       <main className="flex-1 px-4 pb-20">
-        {/* Search Section */}
-        <div className="mt-6 space-y-3" data-section-id="product-search">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Find a Product</h2>
+        <div className="mt-6 flex flex-col gap-3" data-section-id="product-search">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide text-balance">Find a Product</h2>
           <form onSubmit={handleSearch}>
             <div className="relative flex items-center">
-              <input
+              <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
                 placeholder="Search by product name or barcode..."
                 aria-label="Search products by name or barcode"
-                className="w-full p-4 pr-14 rounded-xl bg-accent border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="h-auto rounded-xl border-border bg-accent! p-4 pr-14 text-base shadow-none transition-shadow duration-200 md:text-base focus-visible:border-transparent focus-visible:ring-2 focus-visible:ring-app"
               />
-              <button
+              <Button
                 type="submit"
+                size="icon"
                 aria-label="Search"
                 data-umami-event="search-product"
-                className="absolute right-2 p-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 active:scale-95 transition-all duration-150"
+                className="absolute right-2 rounded-lg border-0 bg-app p-2 text-app-foreground transition-transform duration-150 hover:bg-app-strong active:scale-95"
               >
-                <Search className="w-5 h-5" />
-              </button>
+                <Search className="size-5" />
+              </Button>
             </div>
           </form>
         </div>
-
-        {/* Scan Button - Primary CTA */}
         <div className="mt-8" data-section-id="scan-cta">
-          <button
+          <Button
             type="button"
+            variant="ghost"
             onClick={() => navigate('/app/scan')}
             data-umami-event="scan-product-cta"
-            className="group w-full flex items-center justify-between p-5 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+            className="group flex h-auto w-full items-center justify-between whitespace-normal rounded-2xl border-0 bg-gradient-to-r from-app to-app-strong p-5 font-normal shadow-lg shadow-app/25 transition-transform duration-200 hover:scale-[1.02] hover:shadow-app/40 active:scale-[0.98]"
           >
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Scan className="w-7 h-7 text-white" />
+              <div className="p-3 bg-app-foreground/20 rounded-xl">
+                <Scan className="size-7 text-app-foreground" />
               </div>
               <div className="text-left">
-                <span className="block text-lg font-semibold text-white">Scan Product</span>
-                <span className="block text-sm text-blue-100">Use camera to scan barcode</span>
+                <span className="block text-lg font-semibold text-app-foreground">Scan Product</span>
+                <span className="block text-sm text-app-foreground/80">Use camera to scan barcode</span>
               </div>
             </div>
-            <ArrowRight className="w-6 h-6 text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all duration-200" />
-          </button>
+            <ArrowRight className="size-6 text-app-foreground/70 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-app-foreground" />
+          </Button>
         </div>
-
-        {/* Recent Scans */}
         <div className="mt-10" data-section-id="recent-scans">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-2">
-              <Clock className="w-4 h-4" />
+            <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-2 text-balance">
+              <Clock className="size-4" />
               Recent Scans
             </h2>
             {recentScans.length > 0 && (
-              <button
+              <Button
+                variant="ghost"
                 onClick={() => setIsRecentScansOpen(true)}
                 data-umami-event="view-all-recent-scans"
-                className="text-sm text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors duration-150"
+                className="h-auto gap-1 border-0 p-0 text-sm font-normal text-app transition-colors duration-150 hover:bg-transparent hover:text-app-strong"
               >
                 View All
-                <ArrowRight className="w-4 h-4" />
-              </button>
+                <ArrowRight className="size-4" />
+              </Button>
             )}
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+          <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
             {recentScans.length === 0 ? (
-              <div className="w-full py-8 text-center text-gray-400 dark:text-gray-500">
-                <ShoppingBag className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <div className="w-full py-8 text-center text-muted-foreground">
+                <ShoppingBag className="size-10 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No recent scans yet</p>
               </div>
             ) : (
               recentScans.map(scan => (
-                <button
+                <Button
                   key={scan.id}
+                  variant="ghost"
                   aria-label={`View ${scan.name}`}
                   data-umami-event="select-recent-scan"
-                  className="flex-shrink-0 w-28 bg-accent rounded-xl p-2.5 hover:scale-[1.03] active:scale-[0.97] transition-transform duration-150"
+                  className="h-auto w-28 flex-shrink-0 flex-col items-stretch gap-0 whitespace-normal rounded-xl border-0 bg-accent p-2.5 font-normal transition-transform duration-150 hover:scale-[1.03] hover:bg-accent active:scale-[0.97]"
                   onClick={() => handleSelectRecentScan(scan)}
                 >
                   <div className="w-full h-20 bg-background rounded-lg mb-2 overflow-hidden">
@@ -193,41 +171,39 @@ export default function HomeView() {
                       <img
                         src={scan.image}
                         alt={scan.name}
-                        className="w-full h-full object-cover"
+                        className="size-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <ShoppingBag className="w-7 h-7 text-blue-500" />
+                      <div className="size-full flex items-center justify-center">
+                        <ShoppingBag className="size-7 text-app" />
                       </div>
                     )}
                   </div>
-                  <div className="text-xs font-medium truncate text-gray-700 dark:text-gray-300">{scan.name}</div>
-                </button>
+                  <div className="text-xs font-medium truncate text-foreground">{scan.name}</div>
+                </Button>
               ))
             )}
           </div>
         </div>
-
-        {/* Ingredients Guide */}
-        <div className="mt-10 bg-accent rounded-2xl p-5 border border-gray-200 dark:border-gray-700" data-section-id="ingredients-guide">
+        <div className="mt-10 bg-accent rounded-2xl p-5 border border-border" data-section-id="ingredients-guide">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Info className="w-4 h-4 text-blue-500" />
+            <div className="p-2 bg-info/10 rounded-lg">
+              <Info className="size-4 text-app" />
             </div>
-            <h2 className="text-base font-semibold">Ingredients Guide</h2>
+            <h2 className="text-base font-semibold text-balance">Ingredients Guide</h2>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div className="flex flex-col items-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-              <div className="w-3 h-3 bg-green-500 rounded-full mb-2"></div>
-              <span className="text-xs font-medium text-green-700 dark:text-green-400">Safe</span>
+            <div className="flex flex-col items-center p-3 bg-success/10 rounded-xl">
+              <div className="size-3 bg-success rounded-full mb-2"></div>
+              <span className="text-xs font-medium text-success">Safe</span>
             </div>
-            <div className="flex flex-col items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl">
-              <div className="w-3 h-3 bg-yellow-500 rounded-full mb-2"></div>
-              <span className="text-xs font-medium text-yellow-700 dark:text-yellow-400">Caution</span>
+            <div className="flex flex-col items-center p-3 bg-warning/10 rounded-xl">
+              <div className="size-3 bg-warning rounded-full mb-2"></div>
+              <span className="text-xs font-medium text-warning">Caution</span>
             </div>
-            <div className="flex flex-col items-center p-3 bg-red-50 dark:bg-red-900/20 rounded-xl">
-              <div className="w-3 h-3 bg-red-500 rounded-full mb-2"></div>
-              <span className="text-xs font-medium text-red-700 dark:text-red-400">Avoid</span>
+            <div className="flex flex-col items-center p-3 bg-danger/10 rounded-xl">
+              <div className="size-3 bg-danger rounded-full mb-2"></div>
+              <span className="text-xs font-medium text-danger">Avoid</span>
             </div>
           </div>
         </div>

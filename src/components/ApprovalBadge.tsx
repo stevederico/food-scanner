@@ -1,26 +1,19 @@
-import { ThumbsDown, ThumbsUp } from '@stevederico/skateboard-ui/icons';
+import { ThumbsDown, ThumbsUp } from '../icons';
 
-/** Props for the ApprovalBadge component. */
 interface ApprovalBadgeProps {
-  /** Whether the product passed the ingredient check */
+  
   isApproved: boolean;
-  /** Show the text badge below the icon (defaults to true) */
+  
   showBadge?: boolean;
 }
 
-/**
- * Visual approval indicator for a scanned product.
- *
- * @component
- * @returns Thumbs-up/down icon with optional Approved/Not Approved badge
- */
 export default function ApprovalBadge({ isApproved, showBadge = true }: ApprovalBadgeProps) {
   if (isApproved) {
     return (
       <div className="flex flex-col items-center">
-        <ThumbsUp className="size-24 text-green-500" />
+        <ThumbsUp className="size-24 text-success" />
         {showBadge && (
-          <div className="bg-green-500 px-3 py-2 text-white rounded-full my-4">Approved</div>
+          <div className="bg-success px-3 py-2 text-app-foreground rounded-full my-4">Approved</div>
         )}
       </div>
     );
@@ -28,9 +21,9 @@ export default function ApprovalBadge({ isApproved, showBadge = true }: Approval
 
   return (
     <div className="flex flex-col items-center">
-      <ThumbsDown className="size-24 text-red-500" />
+      <ThumbsDown className="size-24 text-danger" />
       {showBadge && (
-        <div className="bg-red-500 px-3 py-2 text-white rounded-full my-4">Not Approved</div>
+        <div className="bg-danger px-3 py-2 text-app-foreground rounded-full my-4">Not Approved</div>
       )}
     </div>
   );

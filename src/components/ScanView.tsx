@@ -1,28 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/library";
-import { Dialog, DialogContent, DialogTitle } from '@stevederico/skateboard-ui/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@stevederico/skateboard-ui/ui/dialog';
 import { Button } from '@stevederico/skateboard-ui/ui/button';
 import UpgradeSheet, { type UpgradeSheetHandle } from '@stevederico/skateboard-ui/UpgradeSheet';
 import { useUser } from '@stevederico/skateboard-ui/Context';
 import { getBackendURL, getCSRFToken } from '@stevederico/skateboard-ui/Utilities';
-import { addToRecentScans } from '../services/ProductService';
+import { addToRecentScans } from '../services/productService';
 import { claimScan } from '../services/scanClaim';
 import type { RatedIngredient, ScannedProduct } from '../services/scanClaim';
 import IngredientRenderer from './IngredientRenderer';
 import ApprovalBadge from './ApprovalBadge';
 
-/**
- * Live barcode scanner view backed by the device camera and ZXing.
- *
- * @component
- * @returns Camera scanner with a product result dialog
- */
 export default function ScanView() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const upgradeSheetRef = useRef<UpgradeSheetHandle>(null);
-  // The decoder reports the same barcode on every frame; handle one at a time
-  // so a single scan is looked up and charged once, until "Scan Again".
   const isHandlingRef = useRef(false);
   const user = useUser();
   const [ingredients, setIngredients] = useState<RatedIngredient[]>([]);
@@ -32,14 +24,7 @@ export default function ScanView() {
   const [errorMessage, setErrorMessage] = useState("");
   const [upgradeMessage, setUpgradeMessage] = useState("");
 
-  /**
-   * Scan a decoded barcode through the backend and show the rated product.
-   *
-   * The server looks the product up and rates it behind the plan gate: a found
-   * product spends one free scan (subscribers are unlimited). When the free
-   * scans are gone, scanning pauses and the upgrade sheet opens.
-   * @param productID - Decoded barcode value
-   */
+  
   async function handleProductScan(productID: string) {
     if (isHandlingRef.current) return;
     isHandlingRef.current = true;
@@ -63,7 +48,7 @@ export default function ScanView() {
     setOpen(true);
   }
 
-  /** Begin continuous decoding from the rear camera into the video element. */
+  
   const startScan = async () => {
     const video = videoRef.current;
     if (readerRef.current && video) {
@@ -82,8 +67,8 @@ export default function ScanView() {
     }
   };
 
-  /** Clear the last result and resume decoding. */
-  function reset() {
+  
+  function handleReset() {
     isHandlingRef.current = false;
     setUpgradeMessage("");
     setProduct({ code: "", product_name: "", image_url: "" });
@@ -105,8 +90,8 @@ export default function ScanView() {
   }, []);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden" data-section-id="barcode-scanner">
-      <video ref={videoRef} className="w-full h-full object-cover absolute inset-0" />
+    <div className="relative size-screen overflow-hidden" data-section-id="barcode-scanner">
+      <video ref={videoRef} className="size-full object-cover absolute inset-0" />
 
       <UpgradeSheet ref={upgradeSheetRef} userEmail={user?.email} />
 
@@ -118,35 +103,36 @@ export default function ScanView() {
         >
           <h2 className="text-center text-lg font-semibold text-balance">{upgradeMessage}</h2>
           <Button size="lg" onClick={() => upgradeSheetRef.current?.show()}>Upgrade</Button>
-          <Button size="lg" variant="outline" onClick={reset}>Scan Again</Button>
+          <Button size="lg" variant="outline" onClick={handleReset}>Scan Again</Button>
         </section>
       ) : null}
 
       <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen);
-        if (!isOpen) reset();
+        if (!isOpen) handleReset();
       }}>
         <DialogContent
           showCloseButton={false}
-          className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg data-[state=closed]:slide-out-to-bottom-96 data-[state=open]:slide-in-from-bottom-96 rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
+          className="fixed bottom-0 left-0 right-0 top-auto translate-x-0 translate-y-0 mt-24 flex flex-col bg-background p-6 shadow-lg rounded-t-lg rounded-b-none max-w-full sm:max-w-full"
         >
+          <DialogDescription className="sr-only">Scanned product details</DialogDescription>
           {errorMessage ? (
             <>
               <DialogTitle className="text-xl font-semibold text-center mb-4">{errorMessage}</DialogTitle>
-              <button
+              <Button
                 data-umami-event="scan-again-error"
-                className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                onClick={() => { setOpen(false); reset(); }}
+                className="h-auto w-full rounded border-0 bg-app px-4 py-2 font-bold text-app-foreground hover:bg-app-strong active:scale-100"
+                onClick={() => { setOpen(false); handleReset(); }}
               >
                 Scan Again
-              </button>
+              </Button>
             </>
           ) : (
             <>
               <div className="relative w-full flex justify-center mb-4">
                 <div className="h-64 w-full bg-background" />
-                <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt={product.product_name || 'Product image'} />
-                <div className="absolute inset-0 bg-white/25" />
+                {product.image_url ? <img className="w-full object-contain max-h-64 absolute inset-0" src={product.image_url} alt={product.product_name || 'Product image'}/> : null}
+                <div className="absolute inset-0 bg-app-foreground/25" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   {ingredients.length ? <ApprovalBadge isApproved={isApproved} /> : null}
                 </div>
@@ -158,13 +144,13 @@ export default function ScanView() {
                 <IngredientRenderer ingredients={ingredients} />
               </div>
               <div className="mt-6 flex">
-                <button
+                <Button
                   data-umami-event="scan-again-success"
-                  className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-                  onClick={() => { setOpen(false); reset(); }}
+                  className="h-auto w-full rounded border-0 bg-app px-4 py-2 font-bold text-app-foreground hover:bg-app-strong active:scale-100"
+                  onClick={() => { setOpen(false); handleReset(); }}
                 >
                   Scan Again
-                </button>
+                </Button>
               </div>
             </>
           )}

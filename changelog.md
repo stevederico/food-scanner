@@ -1,3 +1,17 @@
+0.27.0
+
+  Upgrade skateboard 5.27.0
+  Pin skateboard-ui 5.26.0
+  Merge template backend
+  Keep libSQL engine
+  Add libSQL retry
+  Add oxlint guardrails
+  Add icon funnel
+  Use status tokens
+  Use Button, Input
+  Fix empty image src
+  Rewrite verify flows
+
 0.26.0
 
   Drop @types/node

@@ -6,7 +6,10 @@ import {
   htmlReplacePlugin,
   dynamicRobotsPlugin,
   dynamicSitemapPlugin,
-  dynamicManifestPlugin
+  dynamicManifestPlugin,
+  devBackendPortPlugin,
+  envPort,
+  withDevBackendPort
 } from './vite.plugins.ts';
 
 const constantsWithoutHttp = {
@@ -22,8 +25,6 @@ const constantsWithHttp = {
 
 let constantsMode = 'without-http';
 
-// Inject the constants source instead of mocking node:fs — the reader closes over the
-// live `constantsMode`, so flipping it in beforeEach/it switches the fixture.
 __setConstantsReaderForTests(() =>
   JSON.stringify(constantsMode === 'with-http' ? constantsWithHttp : constantsWithoutHttp)
 );
@@ -187,12 +188,6 @@ describe('dev server generated files', () => {
     constantsMode = 'without-http';
   });
 
-  /**
-   * Run a plugin's dev middleware and capture the response it writes.
-   *
-   * @param plugin - Plugin exposing configureServer
-   * @returns Registered route, response content type, and body
-   */
   function callDevMiddleware(plugin) {
     let registered = null;
     plugin.configureServer({
@@ -242,5 +237,67 @@ describe('dev server generated files', () => {
     assert.equal(dev.route, '/manifest.json');
     assert.equal(dev.contentType, 'application/manifest+json');
     assert.equal(JSON.parse(dev.body).start_url, '/app');
+  });
+});
+describe('vite.config.ts', () => {
+  const serveConfig = async (env = {}) => {
+    const { skateboardViteConfig } = await import('./vite.config.ts');
+    return skateboardViteConfig({ env });
+  };
+
+  it('leaves HMR at its default so the client follows a 5173 to 5174 port fallback', async () => {
+    const config = await serveConfig();
+    assert.equal(config.server.hmr, undefined);
+    assert.equal(config.server.port, 5173);
+    assert.equal(config.server.strictPort, false);
+  });
+
+  it('serves on SKATEBOARD_FRONTEND_PORT strictly, so the backend CORS list matches it', async () => {
+    const config = await serveConfig({ SKATEBOARD_FRONTEND_PORT: '5273' });
+    assert.equal(config.server.port, 5273);
+    assert.equal(config.server.strictPort, true);
+  });
+
+  it('loads the dev backend port plugin with the same env', async () => {
+    const config = await serveConfig({ SKATEBOARD_BACKEND_PORT: '8100' });
+    const plugin = config.plugins.find((p) => p.name === 'dev-backend-port');
+    assert.equal(plugin.transform('{"devBackendURL":"x"}', '/app/src/constants.json').code, '{"devBackendURL":"http://localhost:8100/api"}');
+  });
+
+  it('dedupes react and react-dom only, since react-router is vendored inside skateboard-ui', async () => {
+    const config = await serveConfig();
+    assert.deepEqual(config.resolve.dedupe, ['react', 'react-dom']);
+    const prebundled = config.optimizeDeps.include.join(' ');
+    assert.ok(!prebundled.includes('react-router'), prebundled);
+  });
+});
+
+describe('devBackendPortPlugin', () => {
+  const CONSTANTS = JSON.stringify({ appName: 'A', backendURL: '/api', devBackendURL: 'http://localhost:8000/api' });
+
+  it('runs in the dev server only, before the JSON plugin', () => {
+    const plugin = devBackendPortPlugin({});
+    assert.equal(plugin.apply, 'serve');
+    assert.equal(plugin.enforce, 'pre');
+  });
+
+  it('points devBackendURL at SKATEBOARD_BACKEND_PORT and keeps the other constants', () => {
+    const result = devBackendPortPlugin({ SKATEBOARD_BACKEND_PORT: '8100' }).transform(CONSTANTS, '/app/src/constants.json');
+    assert.deepEqual(JSON.parse(result.code), { appName: 'A', backendURL: '/api', devBackendURL: 'http://localhost:8100/api' });
+  });
+
+  it('leaves constants alone without the variable, and other JSON files always', () => {
+    assert.equal(devBackendPortPlugin({}).transform(CONSTANTS, '/app/src/constants.json'), null);
+    assert.equal(devBackendPortPlugin({ SKATEBOARD_BACKEND_PORT: '8100' }).transform('{}', '/app/src/legal.json'), null);
+  });
+
+  it('rejects constants that are not an object', () => {
+    assert.throws(() => withDevBackendPort('[]', 8100), /expected an object/);
+  });
+
+  it('rejects a port that is not a number from 1 to 65535', () => {
+    for (const bad of ['abc', '0', '70000', '51.5']) {
+      assert.throws(() => envPort({ PORT_UNDER_TEST: bad }, 'PORT_UNDER_TEST', 1), /PORT_UNDER_TEST must be a port number from 1 to 65535/);
+    }
   });
 });
